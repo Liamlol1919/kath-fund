@@ -106,6 +106,8 @@ if "claims" not in st.session_state:
          "proof": "Seriennummer auf OVP vorhanden.", "datum": "2026-09-06", "status": "In Prüfung"}])
 if "flash" not in st.session_state:
     st.session_state["flash"] = ""
+if "native_view" not in st.session_state:
+    st.session_state["native_view"] = None  # None | "report"
 
 # =============================================================================
 # 2. BILDER
@@ -320,7 +322,7 @@ elif action == "report_done":
 # 5. REPORT-ANSICHT (nativ, wegen Datei-Upload)
 # =============================================================================
 
-if qp.get("view") == "report":
+if st.session_state["native_view"] == "report":
     st.markdown("""
     <style>
       .stApp { background: #F7F5F0; }
@@ -334,7 +336,7 @@ if qp.get("view") == "report":
                 padding:6px 10px; border-radius:8px; white-space:nowrap; }
     </style>
     <div class="report-wrap">
-    <button onclick="window.parent.location.search=''"
+    <button onclick="window.parent.postMessage({ kfund: 'home' }, '*')"
       style="border:1px solid #D6D5D1;background:#fff;border-radius:10px;padding:6px 12px;font-size:.85rem;cursor:pointer;">← Zurück zur App</button>
     <div class="rp-title">📷 Fund melden</div>
     <div class="rp-sub">Foto aufnehmen oder hochladen — Kategorie wird automatisch vorgeschlagen.
@@ -343,7 +345,7 @@ if qp.get("view") == "report":
 
     uploaded_pil = None
     up_mode = st.radio("Quelle", ["Kamera", "Datei hochladen"], horizontal=True,
-                       index=0 if qp.get("mode") == "camera" else 1)
+                       index=0 if st.session_state.get("up_mode_default") == "Kamera" else 1)
     if up_mode == "Datei hochladen":
         f = st.file_uploader("Foto", type=["jpg", "jpeg", "png", "webp"], label_visibility="collapsed")
     else:
@@ -390,15 +392,67 @@ if qp.get("view") == "report":
                     "status": "Offen", "beschreibung": desc.strip() or "Keine nähere Beschreibung.",
                     "image_file": img_name, "tags": parsed})
                 save_json(ITEMS_FILE, items)
-                qp_view = "report_saved"
                 st.session_state["flash"] = f"Fundstück „{t.strip()}“ wurde eingetragen 🎉"
-                for k in list(qp.keys()):
-                    del qp[k]
+                st.session_state["native_view"] = None
                 st.rerun()
     st.stop()
 
 # =============================================================================
-# 6. UI (HTML mit daisyUI, direkt ins DOM)
+# 5b. VERSTECKTE NATIVE AKTIONS-WIDGETS (das äußere iframe klickt sie per DOM)
+# =============================================================================
+
+st.markdown("""
+<style>
+  .st-key-kfund_report_upload, .st-key-kfund_report_camera,
+  .st-key-kfund_claim_name, .st-key-kfund_claim_proof, .st-key-kfund_claim_item,
+  .st-key-kfund_claim_submit, .st-key-kfund_home {
+    position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none;
+  }
+</style>
+""", unsafe_allow_html=True)
+
+if st.button("OPEN_REPORT_UPLOAD", key="kfund_report_upload"):
+    st.session_state["native_view"] = "report"
+    st.session_state["up_mode_default"] = "Datei hochladen"
+    st.rerun()
+if st.button("OPEN_REPORT_CAMERA", key="kfund_report_camera"):
+    st.session_state["native_view"] = "report"
+    st.session_state["up_mode_default"] = "Kamera"
+    st.rerun()
+if st.button("KFUND_HOME", key="kfund_home"):
+    st.session_state["native_view"] = None
+    st.rerun()
+
+c_name = st.text_input("claim name", key="kfund_claim_name")
+c_proof = st.text_input("claim proof", key="kfund_claim_proof")
+c_item = st.text_input("claim item", key="kfund_claim_item")
+if st.button("SUBMIT_CLAIM", key="kfund_claim_submit"):
+    _name = (st.session_state.get("kfund_claim_name") or "").strip()
+    _proof = (st.session_state.get("kfund_claim_proof") or "").strip()
+    try:
+        _iid = int(st.session_state.get("kfund_claim_item") or 0)
+    except ValueError:
+        _iid = 0
+    if _name and _proof:
+        _item = next((i for i in st.session_state["items"] if i["id"] == _iid), None)
+        if _item and _item["status"] in ("Offen", "Beansprucht"):
+            _nid = max([c["claim_id"] for c in st.session_state["claims"]], default=500) + 1
+            st.session_state["claims"].insert(0, {
+                "claim_id": _nid, "item_id": _iid, "name": _name, "proof": _proof,
+                "datum": heute, "status": "In Prüfung"})
+            _item["status"] = "Beansprucht"
+            save_json(ITEMS_FILE, st.session_state["items"])
+            save_json(CLAIMS_FILE, st.session_state["claims"])
+            st.session_state["flash"] = f"Anspruch auf „{_item['titel']}“ eingereicht."
+    else:
+        st.session_state["flash"] = "Bitte Name und Nachweis ausfüllen."
+    for k in ("kfund_claim_name", "kfund_claim_proof", "kfund_claim_item"):
+        st.session_state[k] = ""
+    st.session_state["native_view"] = None
+    st.rerun()
+
+# =============================================================================
+# 6. UI (HTML mit daisyUI, im component-iframe)
 # =============================================================================
 
 neu_grenze = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
@@ -476,9 +530,9 @@ UI = r"""
           onclick="drawer.classList.add('modal-open')" aria-label="Menü">
     <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
   </button>
-  <a href="?view=report&mode=camera" class="fixed bottom-4 right-4 z-40 h-12 px-4 rounded-full btn-accent shadow-lg text-sm font-semibold flex items-center gap-2">
+  <button class="fixed bottom-4 right-4 z-40 h-12 px-4 rounded-full btn-accent shadow-lg text-sm font-semibold flex items-center gap-2" onclick="openReport('camera')">
     <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Melden
-  </a>
+  </button>
 
   <!-- flash -->
   <div id="flash" class="hidden px-4 pt-3">
@@ -505,7 +559,7 @@ UI = r"""
 
     <!-- Zwei Wege -->
     <div class="grid grid-cols-2 gap-3 mt-4">
-      <div class="icard icard-hover p-4 cursor-pointer" onclick="location.href='?view=report&mode=camera'">
+      <div class="icard icard-hover p-4 cursor-pointer" onclick="openReport('camera')">
         <div class="w-10 h-10 rounded-xl bg-[var(--accent-fg)] flex items-center justify-center text-[var(--accent)]">
           <svg class="lucide" style="width:1.4em;height:1.4em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg>
         </div>
@@ -574,8 +628,8 @@ UI = r"""
         <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg> Start</button>
       <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.classList.remove('modal-open');goSearchAll()">
         <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg> Alle Fundstücke</button>
-      <a href="?view=report" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.classList.remove('modal-open')">
-        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg> Fund melden</a>
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium text-left" onclick="drawer.classList.remove('modal-open');openReport('upload')">
+        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg> Fund melden</button>
     </div>
     <div class="px-4 pt-2 pb-1 lbl">Kategorien</div>
     <div class="px-3 pb-2 max-h-56 overflow-y-auto" id="drawerCats"></div>
@@ -632,13 +686,13 @@ function show(v) { currentView = v;
   ['home','search','item'].forEach(x => $('#view-'+x).classList.toggle('hidden', x !== v));
   window.scrollTo(0,0); fitHeight(); }
 
-function openReport() { location.search = '?view=report'; }
+function openReport(mode) { window.parent.postMessage({ kfund: 'report', mode: mode || 'upload' }, '*'); }
 function submitClaim() {
   const name = $('#claimName').value.trim(), proof = $('#claimProof').value.trim();
   const iid = claimModal.dataset.item;
   if (!name || !proof) { $('#claimName').classList.toggle('input-error', !name);
                          $('#claimProof').classList.toggle('textarea-error', !proof); return; }
-  location.search = `?action=claim&item=${iid}&name=${encodeURIComponent(name)}&proof=${encodeURIComponent(proof)}`;
+  window.parent.postMessage({ kfund: 'claim', item: iid, name, proof }, '*');
 }
 
 function statusBadge(s) {
@@ -838,22 +892,65 @@ UI = (UI
       .replace("__DATA__", data_json)
       .replace("__FLASH__", flash.replace("'", "\\'")))
 
-# ---- UI direkt in die Streamlit-Seite injizieren (kein iframe = keine Sandbox) ----
-def _extract(ui, tag_open, tag_close):
-    a = ui.index(tag_open) + len(tag_open)
-    b = ui.index(tag_close, a)
-    return ui[a:b]
+# ÃuÃeres iframe: gleiche origin -> darf streamlit-dom klicken (bruecke um die sandbox)
+OUTER = """<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#EDECE8}
+iframe{width:100%;border:0;display:block}</style></head><body>
+<iframe id="app" srcdoc="__SRCDOC__"
+  sandbox="allow-scripts allow-same-origin allow-modals allow-forms"
+  style="width:100%;height:1200px"></iframe>
+<script>
+const f = document.getElementById('app');
+function sync() {
+  try {
+    const h = f.contentDocument.documentElement.scrollHeight;
+    if (h > 200) {
+      f.style.height = h + 'px';
+      const of = window.frameElement;
+      if (of) {
+        of.style.height = h + 'px';
+        let p = of.parentElement;
+        if (p) p.style.height = h + 'px';
+        if (p && p.parentElement) p.parentElement.style.height = h + 'px';
+      }
+    }
+  } catch (e) {}
+}
+setInterval(sync, 500);
 
-_head_part = _extract(UI, "<head>", "</head>")
-_css_part = _extract(UI, "<style>", "</style>")
-_body_part = _extract(UI, "<body>", "</body>")
-_script_part = _extract(UI, "<script>", "</script>")
-# blank lines wuerden markdown-it die html-bloecke zerreissen lassen
-_body_part = _body_part.replace("\n\n", "\n")
-st.markdown(_head_part, unsafe_allow_html=True)
-st.markdown(f"<style>{_css_part}</style>", unsafe_allow_html=True)
-st.markdown(_body_part, unsafe_allow_html=True)
-st.markdown(f"<script>{_script_part}</script>", unsafe_allow_html=True)
+function setNativeInput(el, val) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+  setter.call(el, val);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function clickButton(text) {
+  const doc = window.parent.document;
+  const btn = [...doc.querySelectorAll('button')].find(b => b.textContent.trim() === text);
+  if (btn) btn.click();
+  return !!btn;
+}
+window.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if (!d.kfund) return;
+  const doc = window.parent.document;
+  if (d.kfund === 'report') {
+    clickButton(d.mode === 'camera' ? 'OPEN_REPORT_CAMERA' : 'OPEN_REPORT_UPLOAD');
+  } else if (d.kfund === 'home') {
+    clickButton('KFUND_HOME');
+  } else if (d.kfund === 'claim') {
+    const inputs = [...doc.querySelectorAll('[data-testid="stTextInput"] input')];
+    if (inputs.length >= 3) {
+      setNativeInput(inputs[0], d.name || '');
+      setNativeInput(inputs[1], d.proof || '');
+      setNativeInput(inputs[2], String(d.item || ''));
+      setTimeout(() => clickButton('SUBMIT_CLAIM'), 120);
+    }
+  }
+});
+</script></body></html>"""
+
+outer = OUTER.replace("__SRCDOC__", html_mod.escape(UI, quote=True))
+components.html(outer, height=1200, scrolling=False)
 
 st.markdown("""
 <style>
