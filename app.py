@@ -382,7 +382,7 @@ with tab_admin:
         st.dataframe(pd.DataFrame(st.session_state['fundstuecke_liste']), use_container_width=True)
         
         st.markdown("#### Audit Logs")
-        st.dataframe(pd.DataFrame(st.session_state['audit_logs']), use_container_width=True)"""
+        st.dataframe(pd.DataFrame(st.session_state['audit_logs']), use_container_width=True)
 ===============================================================================
                SCHUL-FUNDBÜRO ENTERPRISE EDITION v3.1 (FIXED)
 ===============================================================================
