@@ -1,10 +1,9 @@
 """
 ===============================================================================
-                     KATH. FUND - DIGITALE FUNDBÜRO APP
+          kath.fund — Digitales Fundbüro · Katharineum zu Lübeck
 ===============================================================================
-Inspirationsbasis: Originale Papier-Skizze (Kath. Fund Layout & Workflow)
-Optimiert für Streamlit >= 1.40
-KI-Modell: MobileNetV2 (optional, sonst Heuristik)
+Mobile-first (Handy & iPad zuerst). Hero → Suche → Fund melden → Neu → Kategorien.
+Filter & Verwaltung liegen aufgeräumt in der Sidebar.
 ===============================================================================
 """
 
@@ -17,25 +16,45 @@ import datetime
 from pathlib import Path
 
 import streamlit as st
-from PIL import Image, ImageOps, ImageDraw
+from PIL import Image, ImageOps
 import numpy as np
-import pandas as pd
 
 # =============================================================================
-# 1. STREAMLIT CONFIG & CUSTOM STYLING
+# 1. CONFIG & STYLING
 # =============================================================================
 
 st.set_page_config(
-    page_title="Kath. Fund - Fundbüro",
-    page_icon="🔍",
+    page_title="kath.fund — Fundbüro",
+    page_icon="🎒",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
 
-    :root {
+EMBLEM_PATH = Path("assets/emblem.png")
+WORDMARK_PATH = Path("assets/wordmark.png")
+
+
+def file_data_uri(path: Path, max_dim: int = 320) -> str:
+    if not path.exists():
+        return ""
+    try:
+        img = Image.open(path)
+        img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+    except Exception:
+        return ""
+
+
+EMBLEM_URI = file_data_uri(EMBLEM_PATH, 200)
+WORDMARK_URI = file_data_uri(WORDMARK_PATH, 700)
+
+st.markdown(f"""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {{
         --paper: #F2EEE3;
         --card: #FFFCF4;
         --field: #FFFDF7;
@@ -48,29 +67,27 @@ st.markdown("""
         --blue: #2B4C7E;
         --amber: #94641A;
         --hard: 3px 3px 0 rgba(22, 19, 14, .16);
-    }
+    }}
 
-    ::selection { background: var(--red); color: #FFF7EE; }
-    html { font-size: 16.5px; }
+    ::selection {{ background: var(--red); color: #FFF7EE; }}
+    html {{ font-size: 16px; }}
 
-    /* ================= Grundfläche ================= */
-    [data-testid="stAppViewContainer"] {
+    [data-testid="stAppViewContainer"] {{
         background-color: var(--paper);
         background-image: radial-gradient(#E3DAC2 1px, transparent 1.2px);
         background-size: 22px 22px;
-    }
-    .block-container, [data-testid="stMainBlockContainer"] {
-        max-width: 1560px !important;
-        padding: 1.1rem 1.9rem 3.5rem !important;
-    }
-    html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
-        color: var(--ink);
-    }
-    /* dichter, aber großzügig groß */
-    [data-testid="stVerticalBlock"] { gap: .5rem; }
-    [data-testid="stHorizontalBlock"] { gap: .7rem; }
-    hr { border: none; border-top: 1px solid var(--line); margin: 1rem 0; }
+    }}
+    .block-container, [data-testid="stMainBlockContainer"] {{
+        max-width: 1200px !important;
+        padding: .8rem .9rem 3rem !important;
+    }}
+    @media (min-width: 768px) {{
+        html {{ font-size: 16.5px; }}
+        .block-container, [data-testid="stMainBlockContainer"] {{ padding: 1.2rem 1.8rem 3.5rem !important; }}
+    }}
+    html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif; color: var(--ink); }}
+    [data-testid="stVerticalBlock"] {{ gap: .55rem; }}
+    [data-testid="stHorizontalBlock"] {{ gap: .6rem; }}
 
     /* ================= Streamlit-Chrome weg ================= */
     #MainMenu, footer,
@@ -78,255 +95,218 @@ st.markdown("""
     [data-testid="stToolbar"],
     [data-testid="stDecoration"],
     [data-testid="stStatusWidget"],
-    [data-testid="stSidebar"],
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="stAppDeployButton"] { display: none !important; visibility: hidden !important; }
+    [data-testid="stAppDeployButton"] {{ display: none !important; visibility: hidden !important; }}
 
-    /* ================= Masthead ================= */
-    .mast { padding-bottom: 12px; border-bottom: 3px double var(--ink); }
-    .mast .kicker {
-        display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
-        font-family: 'IBM Plex Mono', monospace; font-size: .66rem;
-        letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft);
-    }
-    .mast .kicker em { font-style: normal; color: var(--red); font-weight: 600; }
-    .mast h1 {
-        font-family: 'Archivo Black', sans-serif; font-weight: 400;
-        font-size: clamp(2.4rem, 3.6vw, 3.4rem); line-height: .98;
-        letter-spacing: -.025em; margin: .3rem 0 .25rem;
-    }
-    .mast .sub { font-size: .98rem; color: var(--ink-soft); }
-    .mast .sub b { color: var(--ink); font-weight: 600; }
+    /* ================= Sidebar-Toggle = Schul-Wappen ================= */
+    [data-testid="stSidebarCollapsedControl"] {{
+        background-color: transparent !important;
+        background-image: url('{EMBLEM_URI}') !important;
+        background-size: 44px 44px !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        border: none !important; border-radius: 50% !important;
+        width: 52px !important; height: 52px !important;
+        top: 10px !important; left: 8px !important;
+        opacity: .92;
+    }}
+    [data-testid="stSidebarCollapsedControl"]:hover {{ opacity: 1; transform: scale(1.06); }}
+    [data-testid="stSidebarCollapsedControl"] svg, [data-testid="stSidebarCollapsedControl"] img,
+    [data-testid="stSidebarCollapsedControl"]::before {{ display: none !important; }}
+    [data-testid="stSidebar"] {{
+        background: var(--card) !important;
+        border-right: 2px solid var(--ink);
+    }}
+    [data-testid="stSidebar"] .block-container {{ padding: 1rem 1rem 2rem !important; }}
 
-    /* ================= Kennzahlen-Leiste ================= */
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; margin: 14px 0 16px; }
-    .kpi {
-        background: var(--card); border: 1.5px solid var(--ink); border-radius: 10px;
-        padding: 9px 13px 10px; box-shadow: var(--hard);
-    }
-    .kpi span {
-        display: block; font-family: 'IBM Plex Mono', monospace; font-size: .62rem;
-        letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft);
-    }
-    .kpi b { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.85rem; line-height: 1.15; letter-spacing: -.02em; }
-    .kpi.accent { background: var(--ink); border-color: var(--ink); }
-    .kpi.accent span { color: #B9AF95; }
-    .kpi.accent b { color: var(--paper); }
+    /* ================= Hero ================= */
+    .hero {{ text-align: center; padding: 1.2rem 0 .4rem; }}
+    .hero img.wordmark {{ width: min(320px, 78vw); height: auto; }}
+    .hero .kicker {{
+        font-family: 'IBM Plex Mono', monospace; font-size: .62rem;
+        letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft);
+        margin-top: .8rem;
+    }}
+    .hero .kicker em {{ font-style: normal; color: var(--red); font-weight: 600; }}
+    @media (min-width: 768px) {{ .hero {{ padding: 2.2rem 0 .8rem; }} .hero img.wordmark {{ width: min(420px, 55vw); }} }}
 
-    /* ================= Chip-Gruppen (Radio) ================= */
-    div[data-testid="stRadio"] [role="radiogroup"] { display: flex; flex-wrap: wrap; gap: 7px; }
-    div[data-testid="stRadio"] [role="radiogroup"] > label {
-        margin: 0; padding: 7px 14px; border: 1.5px solid var(--line); border-radius: 999px;
-        background: var(--card); cursor: pointer; transition: all .12s ease;
-        box-shadow: 0 1px 0 rgba(22, 19, 14, .05);
-    }
-    div[data-testid="stRadio"] [role="radiogroup"] > label > span:first-child { display: none; }
-    div[data-testid="stRadio"] [role="radiogroup"] > label > div > div > div:first-child { display: none; }
-    div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"] {
-        background: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 rgba(22, 19, 14, .22);
-    }
-    div[data-testid="stRadio"] [role="radiogroup"] > label[data-selected="true"] p { color: var(--paper) !important; }
-    div[data-testid="stRadio"] [role="radiogroup"] > label p {
-        font-family: 'IBM Plex Mono', monospace !important; font-size: .72rem !important;
-        font-weight: 600 !important; letter-spacing: .07em !important; text-transform: uppercase;
-        color: var(--ink-soft) !important; margin: 0 !important; line-height: 1.2;
-    }
-    div[data-testid="stRadio"] [role="radiogroup"] > label:hover { border-color: var(--ink); }
-    div[data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) {
-        background: var(--ink); border-color: var(--ink); box-shadow: 3px 3px 0 rgba(22, 19, 14, .22);
-    }
-    div[data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) p { color: var(--paper) !important; }
+    /* ================= Suchzeile ================= */
+    .searchrow {{ display: flex; gap: 8px; align-items: stretch; }}
+    .st-key-heroq input {{
+        font-size: 1.02rem !important; min-height: 3.15rem;
+        padding-left: .95rem !important; border-radius: 10px !important;
+    }}
+    .st-key-herogo button {{
+        min-height: 3.15rem !important; background: var(--ink) !important; color: var(--paper) !important;
+        border-color: var(--ink) !important; box-shadow: 3px 3px 0 rgba(22,19,14,.4);
+    }}
 
-    /* Hauptnavigation: groß und unübersehbar */
-    .st-key-nav [role="radiogroup"] > label, .st-key-navwrap [role="radiogroup"] > label { padding: 11px 24px; border-width: 2px; border-radius: 10px; }
-    .st-key-nav [role="radiogroup"] > label p, .st-key-navwrap [role="radiogroup"] > label p { font-size: .84rem !important; letter-spacing: .1em !important; }
-    .st-key-nav [role="radiogroup"], .st-key-navwrap [role="radiogroup"] { gap: 9px; padding-bottom: 2px; }
+    /* ================= Melden-Block ================= */
+    .report {{
+        background: var(--card); border: 2px solid var(--ink); border-radius: 14px;
+        box-shadow: var(--hard); padding: 16px 16px 14px; margin-top: 1.1rem; text-align: left;
+    }}
+    @media (min-width: 768px) {{ .report {{ padding: 20px 24px 18px; }} }}
+    .report h3 {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.3rem; margin: 0 0 2px; letter-spacing: -.02em; }}
+    .report p {{ color: var(--ink-soft); font-size: .88rem; margin: 0 0 10px; }}
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {{
+        border: 1.5px dashed var(--ink); background: var(--field); border-radius: 10px;
+        min-height: 110px;
+    }}
+    .st-key-reportbtn button {{
+        background: var(--red) !important; border-color: var(--red) !important; color: #FFF6EA !important;
+        box-shadow: 3px 3px 0 rgba(22,19,14,.5);
+    }}
 
-    /* Ansichtsmodus laut Skizze */
-    .st-key-modefilter [role="radiogroup"] > label { padding: 9px 18px; }
-    .st-key-modefilter [role="radiogroup"] > label p { font-size: .76rem !important; }
-    .st-key-layoutsel [role="radiogroup"] { justify-content: flex-end; }
-
-    /* ================= Abschnittsköpfe ================= */
-    .sec { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 16px 0 4px; }
-    .sec h2 { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.55rem; letter-spacing: -.02em; margin: 0; }
-    .sec .tag {
-        font-family: 'IBM Plex Mono', monospace; font-size: .64rem; letter-spacing: .14em;
+    /* ================= Sektionsköpfe & Scroller ================= */
+    .sec {{ display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 1.4rem 0 8px; }}
+    .sec h2 {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.32rem; letter-spacing: -.02em; margin: 0; }}
+    .sec .tag {{
+        font-family: 'IBM Plex Mono', monospace; font-size: .6rem; letter-spacing: .14em;
         text-transform: uppercase; color: var(--ink-soft);
         border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px;
-    }
-    .sec-note { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--ink-soft); margin-bottom: 14px; }
-    .sec-note b { color: var(--ink); }
-    .ctl-lbl {
-        font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .14em;
-        text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px;
-    }
-    .stMarkdown h4 {
-        font-family: 'IBM Plex Mono', monospace !important; font-size: .72rem !important;
-        letter-spacing: .14em !important; text-transform: uppercase !important;
-        color: var(--ink-soft) !important; margin: .9rem 0 .2rem !important;
-    }
-    .stMarkdown h5 { font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 1rem; }
-    .stMarkdown p { font-size: .94rem; }
-    [data-testid="stCaptionContainer"] { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--ink-soft); }
+    }}
 
-    /* ================= Belegkarte ================= */
-    .ticket {
+    /* horizontaler Sidescroller: Spalten werden nicht umgebrochen */
+    .st-key-scroller [data-testid="stHorizontalBlock"] {{
+        flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden;
+        padding: 4px 2px 12px; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+    }}
+    .st-key-scroller [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+        min-width: 218px !important; max-width: 218px; flex: none;
+    }}
+    @media (min-width: 768px) {{
+        .st-key-scroller [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{ min-width: 240px; }}
+    }}
+
+    /* ================= Karte ================= */
+    .ticket {{
         background: var(--card); border: 1.5px solid var(--ink); border-radius: 11px;
         overflow: hidden; box-shadow: var(--hard); display: flex; flex-direction: column; height: 100%;
-    }
-    .ticket-head {
-        display: flex; justify-content: space-between; align-items: center; gap: 8px;
-        padding: 8px 12px; background: #F5EFDC; border-bottom: 1.5px solid var(--ink);
-    }
-    .ticket-id { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
-    .ticket-photo { position: relative; }
-    .ticket-photo img { display: block; width: 100%; height: 218px; object-fit: cover; border-bottom: 1.5px solid var(--ink); }
-    .ticket-photo.ph {
-        height: 218px; display: grid; place-items: center; border-bottom: 1.5px solid var(--ink);
+        cursor: pointer;
+    }}
+    .ticket-photo {{ position: relative; }}
+    .ticket-photo img {{ display: block; width: 100%; height: 150px; object-fit: cover; border-bottom: 1.5px solid var(--ink); }}
+    .ticket-photo.ph {{
+        height: 150px; display: grid; place-items: center; border-bottom: 1.5px solid var(--ink);
         background: repeating-linear-gradient(45deg, #EFE8D2 0 11px, #F8F3E4 11px 22px);
-        font-family: 'IBM Plex Mono', monospace; font-size: .74rem; letter-spacing: .14em;
-        text-transform: uppercase; color: #9A9078; text-align: center; padding: 0 18px;
-    }
-    .ticket-body { padding: 12px 13px 13px; display: flex; flex-direction: column; flex: 1; }
-    .ticket-title { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.16rem; letter-spacing: -.015em; line-height: 1.22; margin-bottom: 9px; }
-    .tgrid { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin-bottom: 10px; }
-    .tgrid dt { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); padding-top: 2px; }
-    .tgrid dd { font-size: .86rem; font-weight: 600; text-align: right; margin: 0; }
-    .tdesc { font-size: .84rem; color: var(--ink-2); line-height: 1.45; border-top: 1px dotted var(--line); padding-top: 8px; margin-bottom: 9px; }
-    .tchips { margin-top: auto; }
-    .chip {
-        display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: .64rem;
-        letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2);
-        border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px;
-        margin: 0 5px 5px 0; background: var(--field);
-    }
+        font-family: 'IBM Plex Mono', monospace; font-size: .66rem; letter-spacing: .12em;
+        text-transform: uppercase; color: #9A9078; text-align: center; padding: 0 14px;
+    }}
+    .ticket-body {{ padding: 10px 12px 11px; display: flex; flex-direction: column; flex: 1; }}
+    .ticket-title {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.02rem; line-height: 1.25; letter-spacing: -.015em; margin-bottom: 5px; }}
+    .ticket-meta {{ font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft); }}
 
     /* ================= Stempel ================= */
-    .stamp {
-        display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: .62rem;
+    .stamp {{
+        display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: .6rem;
         font-weight: 600; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
         padding: 3px 9px; border: 1.5px solid currentColor; border-radius: 4px;
-        box-shadow: inset 0 0 0 2px var(--card), inset 0 0 0 3.5px currentColor;
         transform: rotate(-3deg); background: var(--card);
-    }
-    .s-offen { color: var(--amber); } .s-beansprucht { color: var(--blue); }
-    .s-abgeholt { color: var(--green); } .s-entsorgt { color: var(--red); }
-    .newflag {
-        display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: .58rem;
+    }}
+    .s-offen {{ color: var(--amber); }} .s-beansprucht {{ color: var(--blue); }}
+    .s-abgeholt {{ color: var(--green); }} .s-entsorgt {{ color: var(--red); }}
+    .newflag {{
+        display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
         letter-spacing: .12em; text-transform: uppercase; color: var(--red);
         border: 1px solid var(--red); border-radius: 3px; padding: 1px 6px; margin-left: 6px;
-    }
+    }}
 
-    /* ================= Listenansicht ================= */
-    .row-item {
-        display: flex; gap: 15px; align-items: center; background: var(--card);
-        border: 1.5px solid var(--ink); border-radius: 11px; padding: 10px 15px;
-        box-shadow: var(--hard); margin-bottom: 9px;
-    }
-    .row-item img.thumb { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--line); flex: none; }
-    .row-item .thumb.ph {
-        width: 84px; height: 84px; flex: none; border-radius: 8px; border: 1.5px solid var(--line);
-        display: grid; place-items: center; text-align: center;
-        background: repeating-linear-gradient(45deg, #EFE8D2 0 8px, #F8F3E4 8px 16px);
-        font-family: 'IBM Plex Mono', monospace; font-size: .5rem; letter-spacing: .08em;
-        text-transform: uppercase; color: #9A9078; padding: 4px;
-    }
-    .ri-main { flex: 1; min-width: 0; }
-    .ri-title { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.12rem; letter-spacing: -.015em; }
-    .ri-meta { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin-top: 3px; }
-    .ri-desc { font-size: .84rem; color: var(--ink-2); margin-top: 5px; }
+    /* ================= Chips (Filter in der Sidebar) ================= */
+    div[data-testid="stRadio"] [role="radiogroup"] {{ display: flex; flex-wrap: wrap; gap: 6px; }}
+    div[data-testid="stRadio"] [role="radiogroup"] > label {{
+        margin: 0; padding: 6px 12px; border: 1.5px solid var(--line); border-radius: 999px;
+        background: var(--card); cursor: pointer;
+    }}
+    div[data-testid="stRadio"] [role="radiogroup"] > label > span:first-child,
+    div[data-testid="stRadio"] [role="radiogroup"] > label > div > div > div:first-child {{ display: none; }}
+    div[data-testid="stRadio"] [role="radiogroup"] > label p {{
+        font-family: 'IBM Plex Mono', monospace !important; font-size: .68rem !important;
+        font-weight: 600 !important; letter-spacing: .06em !important; text-transform: uppercase;
+        color: var(--ink-soft) !important; margin: 0 !important; line-height: 1.2;
+    }}
+    div[data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) {{
+        background: var(--ink); border-color: var(--ink);
+    }}
+    div[data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) p {{ color: var(--paper) !important; }}
 
-    /* ================= Hinweise / Prüfvermerk ================= */
-    .note { border-left: 3px solid var(--ink); background: #F5EFDC; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: .88rem; margin-bottom: 12px; }
-    .note span { display: block; color: var(--ink-soft); font-size: .8rem; margin-top: 2px; }
-    .verdict {
-        display: flex; gap: 15px; align-items: center; background: var(--card);
-        border: 1.5px solid var(--ink); border-radius: 11px; padding: 14px 17px; margin-top: 13px; box-shadow: var(--hard);
-    }
-    .verdict-stamp {
-        font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; font-size: .66rem;
-        letter-spacing: .12em; color: var(--red); border: 2px solid var(--red); border-radius: 6px;
-        padding: 8px 12px; transform: rotate(-4deg); white-space: nowrap; font-weight: 600;
-        box-shadow: inset 0 0 0 2px var(--card), inset 0 0 0 3.5px var(--red);
-    }
-    .verdict-cat { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.16rem; letter-spacing: -.015em; }
-    .verdict-meta { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--ink-soft); margin-top: 3px; }
-    .ai-result-card {
-        background: var(--card); border: 1.5px solid var(--ink); border-radius: 10px;
-        padding: 13px 15px; box-shadow: var(--hard); margin-top: 10px;
-    }
-    .ai-result-card .result-label { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
-    .ai-result-card .result-title { font-family: 'Archivo', sans-serif; font-size: 1.2rem; font-weight: 800; margin-top: 3px; }
-    .ai-result-card .result-meta { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: var(--ink-soft); margin-top: 3px; }
-    .ai-warn { border-left: 3px solid var(--amber); background: #F5EFDC; padding: 9px 12px; font-size: .8rem; color: var(--ink-2); margin-top: 9px; border-radius: 0 6px 6px 0; }
+    /* ================= Detailseite ================= */
+    .detail-head {{ display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }}
+    .detail-head h2 {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: clamp(1.4rem, 4vw, 2rem); letter-spacing: -.02em; margin: 0; }}
+    .dgrid {{ display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0; }}
+    .dgrid dt {{ font-family: 'IBM Plex Mono', monospace; font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); padding-top: 3px; }}
+    .dgrid dd {{ font-size: .95rem; font-weight: 600; margin: 0; }}
+    .panel {{
+        background: var(--card); border: 1.5px solid var(--ink); border-radius: 12px;
+        box-shadow: var(--hard); padding: 16px 18px; margin-bottom: 12px;
+    }}
 
     /* ================= Formulare & Buttons ================= */
-    .stButton > button, .stDownloadButton > button, [data-testid="stFormSubmitButton"] > button,
-    [data-testid="stFileUploader"] button, [data-testid="stCameraInput"] button {
+    .stButton > button, .stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
         font-family: 'IBM Plex Mono', monospace !important; text-transform: uppercase !important;
-        letter-spacing: .1em !important; font-size: .71rem !important; font-weight: 600 !important;
+        letter-spacing: .1em !important; font-size: .7rem !important; font-weight: 600 !important;
         background: var(--card) !important; color: var(--ink) !important;
         border: 1.5px solid var(--ink) !important; border-radius: 8px !important;
-        box-shadow: 3px 3px 0 var(--ink); padding: .62rem 1.1rem !important;
-    }
-    .stButton > button:hover, .stDownloadButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover {
-        transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink);
-    }
-    .stButton > button:active, .stDownloadButton > button:active, [data-testid="stFormSubmitButton"] > button:active {
-        transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink);
-    }
-    [data-testid="stFormSubmitButton"] > button { background: var(--red) !important; border-color: var(--red) !important; color: #FFF6EA !important; box-shadow: 3px 3px 0 rgba(22,19,14,.5); }
-    .stDownloadButton > button { background: var(--ink) !important; color: var(--paper) !important; }
-    .st-key-cta_new button { background: var(--ink) !important; color: var(--paper) !important; }
+        box-shadow: 3px 3px 0 var(--ink); padding: .6rem 1.05rem !important;
+    }}
+    .stButton > button:hover {{ transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }}
+    .stButton > button:active {{ transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }}
+    [data-testid="stFormSubmitButton"] > button {{
+        background: var(--red) !important; border-color: var(--red) !important; color: #FFF6EA !important;
+    }}
+    .st-key-back button {{ box-shadow: none !important; border-color: var(--line) !important; }}
 
     div[data-testid="stTextInput"] input, div[data-testid="stTextArea"] textarea,
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div, div[data-testid="stNumberInput"] input {
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
         background: var(--field) !important; border: 1.5px solid var(--line) !important;
         border-radius: 8px !important; font-size: .92rem !important; color: var(--ink) !important;
         min-height: 2.65rem;
-    }
-    div[data-testid="stTextInput"] input:focus, div[data-testid="stTextArea"] textarea:focus,
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
+    }}
+    div[data-testid="stTextInput"] input:focus, div[data-testid="stTextArea"] textarea:focus {{
         border-color: var(--ink) !important; box-shadow: 2px 2px 0 var(--ink) !important;
-    }
-    div[data-testid="stTextInput"] input::placeholder, div[data-testid="stTextArea"] textarea::placeholder { color: #A79D86; }
-    /* Schnellsuche: groß */
-    .st-key-q input { font-size: 1.05rem !important; min-height: 3.1rem; padding-left: .95rem !important; }
-    .st-key-searchwrap input { font-size: 1.05rem !important; min-height: 3.1rem; padding-left: .95rem !important; }
-    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {
-        border: 1.5px dashed var(--ink); background: var(--field); border-radius: 11px;
-    }
-    div[data-testid="stRadio"] label { font-size: .9rem; }
-    input[type="radio"], input[type="checkbox"] { accent-color: var(--red); }
+    }}
 
-    /* ================= Tabs (Verwaltung) ================= */
-    [data-testid="stTabs"] [role="tablist"] { display: flex; gap: 7px; border-bottom: 1.5px solid var(--ink); }
-    [data-testid="stTabs"] [data-testid="stTab"] {
-        font-family: 'IBM Plex Mono', monospace; font-size: .69rem; letter-spacing: .1em;
-        text-transform: uppercase; color: var(--ink-soft); padding: 9px 15px;
-        border: 1.5px solid transparent !important; border-bottom: none !important; border-radius: 8px 8px 0 0;
-        box-shadow: none !important; background: transparent !important;
-    }
-    [data-testid="stTabs"] [data-testid="stTab"]::before, [data-testid="stTabs"] [data-testid="stTab"]::after { display: none !important; }
-    [data-testid="stTabs"] [data-testid="stTab"][data-selected="true"] {
-        color: var(--ink); background: var(--card) !important; border-color: var(--ink) !important;
-        border-bottom: none !important; font-weight: 600;
-    }
+    /* ================= Sidebar-Optik ================= */
+    [data-testid="stSidebar"] .stMarkdown h4, .sblbl {{
+        font-family: 'IBM Plex Mono', monospace !important; font-size: .62rem !important;
+        letter-spacing: .14em !important; text-transform: uppercase !important;
+        color: var(--ink-soft) !important; margin: .8rem 0 .3rem !important;
+    }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] {{ flex-direction: column; align-items: stretch; }}
+    [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label {{ border-radius: 8px; }}
 
-    /* ================= Sonstiges ================= */
-    div[data-testid="stAlert"] { border: 1.5px solid var(--ink); border-radius: 9px; background: var(--card); box-shadow: var(--hard); }
-    details[data-testid="stExpander"] { border: 1.5px solid var(--ink); border-radius: 9px; background: var(--card); }
-    details[data-testid="stExpander"] summary { font-family: 'IBM Plex Mono', monospace; font-size: .71rem; letter-spacing: .08em; text-transform: uppercase; }
-    details[data-testid="stExpander"] summary:hover { color: var(--red); }
-    div[data-testid="stDataFrame"] { border: 1.5px solid var(--ink); border-radius: 9px; overflow: hidden; }
-    div[data-testid="stImage"] figcaption { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: var(--ink-soft); }
-    div[data-testid="stSpinner"] p { font-family: 'IBM Plex Mono', monospace; font-size: .74rem; text-transform: uppercase; letter-spacing: .1em; }
+    .sec-note {{ font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--ink-soft); margin-bottom: 10px; }}
+    .sec-note b {{ color: var(--ink); }}
+    .empty {{
+        border: 1.5px dashed var(--line); border-radius: 12px; background: var(--field);
+        text-align: center; padding: 26px 16px; font-family: 'IBM Plex Mono', monospace;
+        font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: #9A9078;
+    }}
+    .note {{ border-left: 3px solid var(--ink); background: #F5EFDC; padding: 9px 13px; border-radius: 0 8px 8px 0; font-size: .86rem; margin: 8px 0; }}
+    .note span {{ display: block; color: var(--ink-soft); font-size: .78rem; margin-top: 2px; }}
+    .verdict {{
+        display: flex; gap: 14px; align-items: center; background: var(--card);
+        border: 1.5px solid var(--ink); border-radius: 11px; padding: 12px 15px; margin-top: 10px; box-shadow: var(--hard);
+    }}
+    .verdict-stamp {{
+        font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; font-size: .62rem;
+        letter-spacing: .12em; color: var(--red); border: 2px solid var(--red); border-radius: 6px;
+        padding: 7px 11px; transform: rotate(-4deg); white-space: nowrap; font-weight: 600;
+    }}
+    .verdict-cat {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.1rem; letter-spacing: -.015em; }}
+    .verdict-meta {{ font-family: 'IBM Plex Mono', monospace; font-size: .66rem; color: var(--ink-soft); margin-top: 2px; }}
+    .ai-warn {{ border-left: 3px solid var(--amber); background: #F5EFDC; padding: 8px 12px; font-size: .78rem; color: var(--ink-2); margin-top: 8px; border-radius: 0 6px 6px 0; }}
+    .stMarkdown p {{ font-size: .93rem; }}
+    [data-testid="stCaptionContainer"] {{ font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: var(--ink-soft); }}
+    [data-testid="stAlert"] {{ border: 1.5px solid var(--ink); border-radius: 9px; background: var(--card); box-shadow: var(--hard); }}
+    details[data-testid="stExpander"] {{ border: 1.5px solid var(--ink); border-radius: 9px; background: var(--card); }}
+    details[data-testid="stExpander"] summary {{ font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }}
+    div[data-testid="stSpinner"] p {{ font-family: 'IBM Plex Mono', monospace; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; }}
+    div[data-testid="stImage"] img {{ border-radius: 10px; border: 1.5px solid var(--ink); }}
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================================================
-# 2. DATA PERSISTENCE & SESSION ENGINE
+# 2. DATA PERSISTENCE
 # =============================================================================
 
 STORAGE_DIR = Path("data")
@@ -345,7 +325,7 @@ CATEGORIES = [
     "Schlüssel & Wertsachen",
     "Schulmaterial & Bücher",
     "Sportbekleidung",
-    "Sonstiges"
+    "Sonstiges",
 ]
 
 LOCATIONS = [
@@ -356,7 +336,7 @@ LOCATIONS = [
     "Bibliothek",
     "Fachräume / MINT",
     "Musiksaal",
-    "Unbekannt"
+    "Unbekannt",
 ]
 
 DEFAULT_ITEMS = [
@@ -366,14 +346,12 @@ DEFAULT_ITEMS = [
         "kategorie": "Kleidung & Textilien",
         "fundort": "Pausenhof",
         "abgabeort": "Hausmeisterbüro (Raum 001)",
-        "kontakt_kuerzel": "S-MUELLER",
-        "finder_rolle": "Schüler:in",
         "datum_fund": "2026-09-01",
         "datum_ablauf": "2026-12-01",
         "status": "Offen",
         "beschreibung": "Größe M, gelber Reißverschluss, Name im Etikett leicht verwischt.",
         "image_file": None,
-        "tags": ["Jacke", "Blau", "Größe M"]
+        "tags": ["Jacke", "Blau", "Größe M"],
     },
     {
         "id": 1002,
@@ -381,14 +359,12 @@ DEFAULT_ITEMS = [
         "kategorie": "Elektronik & Kabel",
         "fundort": "Mensa / Cafeteria",
         "abgabeort": "Sekretariat (Tresor)",
-        "kontakt_kuerzel": "HAUSMEISTER-K",
-        "finder_rolle": "Hausmeister",
         "datum_fund": "2026-09-05",
         "datum_ablauf": "2026-12-05",
         "status": "Beansprucht",
         "beschreibung": "Kratzer auf der Rückseite, schwarze Silikon-Schutzhülle.",
         "image_file": None,
-        "tags": ["Apple", "Audio", "Schwarz"]
+        "tags": ["Apple", "Audio", "Schwarz"],
     },
     {
         "id": 1003,
@@ -396,16 +372,54 @@ DEFAULT_ITEMS = [
         "kategorie": "Trinkflaschen & Brotdosen",
         "fundort": "Sporthalle",
         "abgabeort": "Sporthalle Regallager",
-        "kontakt_kuerzel": "L-SCHMIDT",
-        "finder_rolle": "Lehrkraft",
         "datum_fund": "2026-08-28",
         "datum_ablauf": "2026-11-28",
         "status": "Abgeholt",
         "beschreibung": "Marke 720°DGREE, mattgrün mit Sport-Aufklebern.",
         "image_file": None,
-        "tags": ["720°DGREE", "Grün", "Metall"]
-    }
+        "tags": ["720°DGREE", "Grün", "Metall"],
+    },
+    {
+        "id": 1004,
+        "titel": "Federmappe mit Filzstiften",
+        "kategorie": "Schulmaterial & Bücher",
+        "fundort": "Fachräume / MINT",
+        "abgabeort": "Hausmeisterbüro (Raum 001)",
+        "datum_fund": datetime.date.today().strftime("%Y-%m-%d"),
+        "datum_ablauf": (datetime.date.today() + datetime.timedelta(days=90)).strftime("%Y-%m-%d"),
+        "status": "Offen",
+        "beschreibung": "Rot kariert, ca. 30 Filzstifte, Initialen „J.K.“ auf dem Etikett.",
+        "image_file": None,
+        "tags": ["Federmappe", "Filzstifte"],
+    },
+    {
+        "id": 1005,
+        "titel": "Bundesliga-Sportschuh links",
+        "kategorie": "Sportbekleidung",
+        "fundort": "Sporthalle",
+        "abgabeort": "Sporthalle Regallager",
+        "datum_fund": datetime.date.today().strftime("%Y-%m-%d"),
+        "datum_ablauf": (datetime.date.today() + datetime.timedelta(days=90)).strftime("%Y-%m-%d"),
+        "status": "Offen",
+        "beschreibung": "Größe 43, schwarz-weiß, Schnürsenkel gemacht.",
+        "image_file": None,
+        "tags": ["Schuh", "Größe 43"],
+    },
+    {
+        "id": 1006,
+        "titel": "Stadtbibliothek Schlüsselbund",
+        "kategorie": "Schlüssel & Wertsachen",
+        "fundort": "Bibliothek",
+        "abgabeort": "Sekretariat (Tresor)",
+        "datum_fund": "2026-09-08",
+        "datum_ablauf": "2026-12-08",
+        "status": "Offen",
+        "beschreibung": "Drei Schlüssel, blauer Bibliotheks-Anhänger.",
+        "image_file": None,
+        "tags": ["Schlüssel", "Anhänger"],
+    },
 ]
+
 
 def load_json_file(file_path: Path, default_value):
     if file_path.exists():
@@ -416,6 +430,7 @@ def load_json_file(file_path: Path, default_value):
             return default_value
     return default_value
 
+
 def save_json_file(file_path: Path, data):
     try:
         with open(file_path, "w", encoding="utf-8") as f:
@@ -423,9 +438,9 @@ def save_json_file(file_path: Path, data):
     except Exception as e:
         st.error(f"Fehler beim Speichern: {e}")
 
+
 if "fundstuecke_liste" not in st.session_state:
     st.session_state["fundstuecke_liste"] = load_json_file(ITEMS_FILE, DEFAULT_ITEMS)
-
 if "claims" not in st.session_state:
     st.session_state["claims"] = load_json_file(CLAIMS_FILE, [
         {
@@ -434,44 +449,41 @@ if "claims" not in st.session_state:
             "name": "Lukas M. (9b)",
             "proof": "Seriennummer auf OVP vorhanden, kleine Macke am Scharnier.",
             "datum": "2026-09-06",
-            "status": "In Prüfung"
+            "status": "In Prüfung",
         }
     ])
-
 if "audit_logs" not in st.session_state:
     st.session_state["audit_logs"] = load_json_file(LOGS_FILE, [
         {"timestamp": "2026-09-01 08:30:00", "user": "SYSTEM", "action": "Datenbank gestartet"},
-        {"timestamp": "2026-09-05 14:12:05", "user": "HAUSMEISTER-K", "action": "Fundstück #1002 angelegt"}
     ])
-
 if "current_role" not in st.session_state:
     st.session_state["current_role"] = "Schüler:in"
-
 if "is_authenticated" not in st.session_state:
     st.session_state["is_authenticated"] = False
+if "view" not in st.session_state:
+    st.session_state["view"] = "home"
 
-if "search_input" not in st.session_state:
-    st.session_state["search_input"] = ""
 
 def sync_storage():
     save_json_file(ITEMS_FILE, st.session_state["fundstuecke_liste"])
     save_json_file(CLAIMS_FILE, st.session_state["claims"])
     save_json_file(LOGS_FILE, st.session_state["audit_logs"])
 
+
 def log_action(user: str, action: str):
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     st.session_state["audit_logs"].insert(0, {
-        "timestamp": now,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "user": user,
-        "action": action
+        "action": action,
     })
     sync_storage()
 
+
 def save_uploaded_image(pil_img: Image.Image, item_id: int) -> str:
     filename = f"item_{item_id}_{int(datetime.datetime.now().timestamp())}.jpg"
-    filepath = IMG_DIR / filename
-    pil_img.save(filepath, format="JPEG", quality=85)
+    pil_img.save(IMG_DIR / filename, format="JPEG", quality=85)
     return filename
+
 
 def load_item_image(filename: str):
     if not filename:
@@ -484,130 +496,28 @@ def load_item_image(filename: str):
             return None
     return None
 
+
 def image_to_data_uri(pil_img: Image.Image, max_dim: int = 500) -> str:
-    """Wandelt PIL Image in ein Data-URI um, damit HTML-Karten komplett custom gerendert werden können."""
     img = pil_img.copy()
     img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=82)
-    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-    return f"data:image/jpeg;base64,{b64}"
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+
 
 # =============================================================================
-# 3. AI VISION ENGINE (OPTIONAL: MOBILENETV2, SONST HEURISTIK)
+# 3. AI VISION ENGINE (MOBILENETV2 ONNX, SONST HEURISTIK)
 # =============================================================================
 
-# Mapping von ImageNet-Klassen (MobileNetV2) auf unsere Kategorien
-IMAGENET_CLASS_TO_CATEGORY = {
-    # Kleidung
-    "t-shirt": "Kleidung & Textilien",
-    "jersey": "Kleidung & Textilien",
-    "sweatshirt": "Kleidung & Textilien",
-    "pullover": "Kleidung & Textilien",
-    "cardigan": "Kleidung & Textilien",
-    "sweater": "Kleidung & Textilien",
-    "jacket": "Kleidung & Textilien",
-    "coat": "Kleidung & Textilien",
-    "jean": "Kleidung & Textilien",
-    "trousers": "Kleidung & Textilien",
-    "dress": "Kleidung & Textilien",
-    "scarf": "Kleidung & Textilien",
-    "hat": "Kleidung & Textilien",
-    "glove": "Kleidung & Textilien",
-    # Elektronik
-    "ipad": "Elektronik & Kabel",
-    "tablet": "Elektronik & Kabel",
-    "laptop": "Elektronik & Kabel",
-    "notebook": "Elektronik & Kabel",
-    "computer": "Elektronik & Kabel",
-    "keyboard": "Elektronik & Kabel",
-    "mouse": "Elektronik & Kabel",
-    "cellular telephone": "Elektronik & Kabel",
-    "mobile phone": "Elektronik & Kabel",
-    "smartphone": "Elektronik & Kabel",
-    "headphone": "Elektronik & Kabel",
-    "earphone": "Elektronik & Kabel",
-    "microphone": "Elektronik & Kabel",
-    "charger": "Elektronik & Kabel",
-    "cable": "Elektronik & Kabel",
-    "adapter": "Elektronik & Kabel",
-    "camera": "Elektronik & Kabel",
-    "smartwatch": "Elektronik & Kabel",
-    # Taschen & Rucksäcke
-    "backpack": "Rucksäcke & Taschen",
-    "rucksack": "Rucksäcke & Taschen",
-    "bag": "Rucksäcke & Taschen",
-    "purse": "Rucksäcke & Taschen",
-    "handbag": "Rucksäcke & Taschen",
-    "wallet": "Rucksäcke & Taschen",
-    "briefcase": "Rucksäcke & Taschen",
-    "suitcase": "Rucksäcke & Taschen",
-    # Trinkflaschen & Brotdosen
-    "water bottle": "Trinkflaschen & Brotdosen",
-    "water jug": "Trinkflaschen & Brotdosen",
-    "bottle": "Trinkflaschen & Brotdosen",
-    "thermos": "Trinkflaschen & Brotdosen",
-    "lunch box": "Trinkflaschen & Brotdosen",
-    "food container": "Trinkflaschen & Brotdosen",
-    "mug": "Trinkflaschen & Brotdosen",
-    "cup": "Trinkflaschen & Brotdosen",
-    # Schulmaterial & Bücher
-    "book": "Schulmaterial & Bücher",
-    "textbook": "Schulmaterial & Bücher",
-    "notebook": "Schulmaterial & Bücher",
-    "pencil": "Schulmaterial & Bücher",
-    "pen": "Schulmaterial & Bücher",
-    "pencil case": "Schulmaterial & Bücher",
-    "pencil box": "Schulmaterial & Bücher",
-    "eraser": "Schulmaterial & Bücher",
-    "ruler": "Schulmaterial & Bücher",
-    "calculator": "Schulmaterial & Bücher",
-    # Schlüssel & Wertsachen
-    "key": "Schlüssel & Wertsachen",
-    "keyring": "Schlüssel & Wertsachen",
-    "necklace": "Schlüssel & Wertsachen",
-    "ring": "Schlüssel & Wertsachen",
-    "bracelet": "Schlüssel & Wertsachen",
-    "watch": "Schlüssel & Wertsachen",
-    "coin": "Schlüssel & Wertsachen",
-    # Sportbekleidung
-    "sports shoe": "Sportbekleidung",
-    "sneaker": "Sportbekleidung",
-    "running shoe": "Sportbekleidung",
-    "football helmet": "Sportbekleidung",
-    "baseball glove": "Sportbekleidung",
-    "tennis ball": "Sportbekleidung",
-    "volleyball": "Sportbekleidung",
-    "basketball": "Sportbekleidung",
-    "swimming trunks": "Sportbekleidung",
-    "tracksuit": "Sportbekleidung",
-}
-
-@st.cache_resource(show_spinner=False)
-def load_vision_model():
-    """Leichtes ONNX-Modell; kein TensorFlow nötig."""
-    try:
-        import onnxruntime as ort
-        model_path = Path("mobilenetv2.onnx")
-        labels_path = Path("imagenet_labels.json")
-        if not model_path.exists() or not labels_path.exists():
-            return None
-        session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
-        labels = json.loads(labels_path.read_text(encoding="utf-8"))
-        return session, labels
-    except Exception:
-        return None
-
-# ImageNet kennt keine Schul-Fundbüro-Kategorien. Diese 50 häufigen visuellen
-# Klassen werden deshalb auf unsere acht Katalogkategorien zusammengeführt.
 VISION_CLASS_TO_CATEGORY = {
     "mobile phone": "Elektronik & Kabel", "cellular telephone": "Elektronik & Kabel",
     "hand-held computer": "Elektronik & Kabel", "laptop computer": "Elektronik & Kabel",
     "notebook computer": "Elektronik & Kabel", "desktop computer": "Elektronik & Kabel",
     "computer keyboard": "Elektronik & Kabel", "computer mouse": "Elektronik & Kabel",
     "remote control": "Elektronik & Kabel", "digital clock": "Elektronik & Kabel",
-    "microphone": "Elektronik & Kabel", "camera": "Elektronik & Kabel",
+    "microphone": "Elektronik & Kabel", "digital camera": "Elektronik & Kabel",
     "headphone": "Elektronik & Kabel", "radio": "Elektronik & Kabel",
+    "iPod": "Elektronik & Kabel", "cell": "Elektronik & Kabel",
     "backpack": "Rucksäcke & Taschen", "purse": "Rucksäcke & Taschen",
     "handbag": "Rucksäcke & Taschen", "wallet": "Rucksäcke & Taschen",
     "briefcase": "Rucksäcke & Taschen", "suitcase": "Rucksäcke & Taschen",
@@ -621,17 +531,34 @@ VISION_CLASS_TO_CATEGORY = {
     "jacket": "Kleidung & Textilien", "coat": "Kleidung & Textilien",
     "jean": "Kleidung & Textilien", "trousers": "Kleidung & Textilien",
     "dress": "Kleidung & Textilien", "scarf": "Kleidung & Textilien",
-    "hat": "Kleidung & Textilien", "glove": "Kleidung & Textilien",
+    "sombrero": "Kleidung & Textilien", "cowboy hat": "Kleidung & Textilien",
     "running shoe": "Sportbekleidung", "tennis ball": "Sportbekleidung",
     "volleyball": "Sportbekleidung", "basketball": "Sportbekleidung",
-    "football helmet": "Sportbekleidung", "book": "Schulmaterial & Bücher",
-    "textbook": "Schulmaterial & Bücher", "notebook": "Schulmaterial & Bücher",
-    "pencil": "Schulmaterial & Bücher", "pencil case": "Schulmaterial & Bücher",
-    "ruler": "Schulmaterial & Bücher", "calculator": "Schulmaterial & Bücher",
-    "key": "Schlüssel & Wertsachen", "keyring": "Schlüssel & Wertsachen",
-    "watch": "Schlüssel & Wertsachen", "ring": "Schlüssel & Wertsachen",
+    "soccer ball": "Sportbekleidung", "football helmet": "Sportbekleidung",
+    "book jacket": "Schulmaterial & Bücher", "comic book": "Schulmaterial & Bücher",
+    "notebook": "Schulmaterial & Bücher", "pencil box": "Schulmaterial & Bücher",
+    "rubber eraser": "Schulmaterial & Bücher", "rule": "Schulmaterial & Bücher",
+    "calculator": "Schulmaterial & Bücher",
+    "padlock": "Schlüssel & Wertsachen", "combination lock": "Schlüssel & Wertsachen",
+    "analog clock": "Schlüssel & Wertsachen", "digital watch": "Schlüssel & Wertsachen",
     "necklace": "Schlüssel & Wertsachen", "bracelet": "Schlüssel & Wertsachen",
+    "sunglasses": "Sonstiges", "umbrella": "Sonstiges",
 }
+
+
+@st.cache_resource(show_spinner=False)
+def load_vision_model():
+    try:
+        import onnxruntime as ort
+        model_path = Path("mobilenetv2.onnx")
+        labels_path = Path("imagenet_labels.json")
+        if not model_path.exists() or not labels_path.exists():
+            return None
+        session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
+        labels = json.loads(labels_path.read_text(encoding="utf-8"))
+        return session, labels
+    except Exception:
+        return None
 
 
 def _softmax(values):
@@ -641,11 +568,6 @@ def _softmax(values):
 
 
 def analyze_image_ai(pil_image: Image.Image):
-    """Erkennt einen Gegenstand mit MobileNetV2/ONNX und fällt sicher zurück.
-
-    Wichtig: ImageNet ist kein speziell trainiertes Fundbüro-Modell. Das Ergebnis
-    ist deshalb bewusst nur ein Vorschlag; das Formular lässt die Kategorie ändern.
-    """
     vision = load_vision_model()
     if vision is not None:
         try:
@@ -657,28 +579,19 @@ def analyze_image_ai(pil_image: Image.Image):
             output = session.run(None, {session.get_inputs()[0].name: arr})[0][0]
             probs = _softmax(output)
             ranked = np.argsort(probs)[::-1]
-
-            # Nicht die erstbeste beliebige ImageNet-Klasse nehmen, sondern die
-            # stärkste passende Objektklasse aus den Top-50.
             candidates = []
-            for rank, index in enumerate(ranked[:50]):
+            for index in ranked[:50]:
                 label = str(labels[int(index)]).lower().replace("_", " ")
-                category = VISION_CLASS_TO_CATEGORY.get(label)
+                category = VISION_CLASS_TO_CATEGORY.get(label) or VISION_CLASS_TO_CATEGORY.get(label.split(",")[0].strip())
                 if category:
-                    candidates.append((category, float(probs[index]), label, rank))
-
+                    candidates.append((category, float(probs[index]), label))
             if candidates:
-                category, probability, label, rank = max(candidates, key=lambda x: x[1])
-                # Die ImageNet-Wahrscheinlichkeit ist bei Fotos oft klein; sie
-                # dient nur als Signal. Ein niedriger Wert bleibt sichtbar als
-                # Warnung, die Kategorie wird aber trotzdem sinnvoll vorgeschlagen.
+                category, probability, label = max(candidates, key=lambda x: x[1])
                 confidence = max(0.35, min(0.88, 0.35 + float(probability) * 3.0))
-                return category, confidence, f"MobileNetV2 ONNX · {label}"
+                return category, confidence, f"MobileNetV2 · {label}"
         except Exception:
             pass
 
-    # Konservativer Fallback: niemals aus Seitenverhältnis allein eine falsche
-    # konkrete Kategorie behaupten.
     rgb_img = pil_image.convert("RGB")
     w, h = rgb_img.size
     aspect_ratio = w / float(h)
@@ -694,134 +607,142 @@ def analyze_image_ai(pil_image: Image.Image):
         return "Trinkflaschen & Brotdosen", 0.50, "Bildmerkmale · unsicherer Vorschlag"
     return "Sonstiges", 0.35, "Kein zuverlässiges Modell verfügbar"
 
+
 # =============================================================================
-# 4. HILFSFUNKTIONEN FÜR DIE OBERFLÄCHE
+# 4. NAVIGATION HELFER
 # =============================================================================
 
-ROLES = ["Schüler:in", "Lehrkraft", "Hausmeister / Admin"]
+def go(view: str):
+    st.session_state["view"] = view
 
 
-def nav_to(target: str):
-    """Wird als Button-Callback genutzt: springt direkt in den gewünschten Bereich."""
-    st.session_state["nav"] = target
+def open_item(item_id: int):
+    st.session_state["item_id"] = item_id
+    st.session_state["view"] = "item"
 
 
 def request_claim(item_id: int):
-    """Callback: öffnet den Anspruchsbereich mit bereits gewähltem Fundstück."""
     st.session_state["claim_target"] = item_id
-    st.session_state["nav"] = "Beanspruchen"
-
-
-def ticket_html(item: dict, is_new: bool) -> str:
-    """Rendert ein Fundstück als gedruckten Beleg (Rasteransicht)."""
-    status = item.get("status", "Offen")
-    item_id = item.get("id")
-    titel = html.escape(str(item.get("titel", "")))
-    kategorie = html.escape(str(item.get("kategorie", "")))
-    fundort = html.escape(str(item.get("fundort", "")))
-    lagerort = html.escape(str(item.get("abgabeort", "")))
-    beschreibung = html.escape(str(item.get("beschreibung", "")))
-    frist = html.escape(str(item.get("datum_ablauf", "")))
-    datum = html.escape(str(item.get("datum_fund", "")))
-
-    loaded = load_item_image(item.get("image_file"))
-    if loaded is not None:
-        photo = f'<div class="ticket-photo"><img src="{image_to_data_uri(loaded, 460)}" alt="{titel}"></div>'
-    else:
-        photo = f'<div class="ticket-photo ph">{kategorie}</div>'
-
-    chips = "".join(f'<span class="chip">{html.escape(str(t))}</span>' for t in item.get("tags", []))
-    neu = '<span class="newflag">Neu</span>' if is_new else ""
-
-    return f"""
-    <div class="ticket">
-        <div class="ticket-head">
-            <span class="ticket-id">Beleg Nr. #{item_id}</span>
-            <span class="stamp s-{status.lower()}">{status}</span>
-        </div>
-        {photo}
-        <div class="ticket-body">
-            <div class="ticket-title">{titel}{neu}</div>
-            <dl class="tgrid">
-                <dt>Fundort</dt><dd>{fundort}</dd>
-                <dt>Gefunden</dt><dd>{datum}</dd>
-                <dt>Lagerort</dt><dd>{lagerort}</dd>
-                <dt>Frist bis</dt><dd>{frist}</dd>
-            </dl>
-            <div class="tdesc">{beschreibung}</div>
-            <div class="tchips">{chips}</div>
-        </div>
-    </div>
-    """
-
-
-def row_html(item: dict, is_new: bool) -> str:
-    """Rendert ein Fundstück als kompakte Listenzeile."""
-    status = item.get("status", "Offen")
-    titel = html.escape(str(item.get("titel", "")))
-    kategorie = html.escape(str(item.get("kategorie", "")))
-    beschreibung = html.escape(str(item.get("beschreibung", "")))
-    meta = html.escape(f"#{item.get('id')} · {item.get('fundort')} · {item.get('datum_fund')} · {kategorie}")
-
-    loaded = load_item_image(item.get("image_file"))
-    if loaded is not None:
-        thumb = f'<img class="thumb" src="{image_to_data_uri(loaded, 170)}" alt="{titel}">'
-    else:
-        thumb = f'<div class="thumb ph">{kategorie}</div>'
-
-    neu = '<span class="newflag">Neu</span>' if is_new else ""
-
-    return f"""
-    <div class="row-item">
-        {thumb}
-        <div class="ri-main">
-            <div class="ri-title">{titel}{neu}</div>
-            <div class="ri-meta">{meta}</div>
-            <div class="ri-desc">{beschreibung}</div>
-        </div>
-        <span class="stamp s-{status.lower()}">{status}</span>
-    </div>
-    """
+    st.session_state["view"] = "claim"
 
 
 # =============================================================================
-# 5. KOPFBEREICH, KENNZAHLEN UND NAVIGATION
+# 5. RENDER-BAUSTEINE
 # =============================================================================
 
-items_all = st.session_state["fundstuecke_liste"]
 heute = datetime.date.today()
 neu_grenze = (heute - datetime.timedelta(days=7)).strftime("%Y-%m-%d")
 
-anz_gesamt = len(items_all)
-anz_offen = sum(1 for i in items_all if i.get("status") == "Offen")
-anz_bean = sum(1 for i in items_all if i.get("status") == "Beansprucht")
-anz_abgeholt = sum(1 for i in items_all if i.get("status") == "Abgeholt")
-quote = (anz_abgeholt / anz_gesamt * 100) if anz_gesamt else 0.0
-anz_offene_pruefung = len([c for c in st.session_state["claims"] if c.get("status") == "In Prüfung"])
 
-col_brand, col_zugang = st.columns([3.6, 1.2])
+def is_new(item) -> bool:
+    return str(item.get("datum_fund", "")) >= neu_grenze
 
-with col_brand:
-    st.markdown(f"""
-    <div class="mast">
-        <div class="kicker">
-            <span>Katharineum zu Lübeck</span>
-            <em>Amtliches Fundverzeichnis</em>
-            <span>{heute.strftime('%d.%m.%Y')}</span>
+
+def card_html(item: dict) -> str:
+    status = item.get("status", "Offen")
+    titel = html.escape(str(item.get("titel", "")))
+    kategorie = html.escape(str(item.get("kategorie", "")))
+    meta = html.escape(f"{item.get('fundort')} · {item.get('datum_fund')}")
+    loaded = load_item_image(item.get("image_file"))
+    if loaded is not None:
+        photo = f'<div class="ticket-photo"><img src="{image_to_data_uri(loaded, 420)}" alt="{titel}"></div>'
+    else:
+        photo = f'<div class="ticket-photo ph">{kategorie}</div>'
+    neu = '<span class="newflag">Neu</span>' if is_new(item) else ""
+    return f"""
+    <div class="ticket">
+        {photo}
+        <div class="ticket-body">
+            <div class="ticket-title">{titel}{neu}</div>
+            <div class="ticket-meta">{meta}</div>
         </div>
-        <h1>KATH. FUND</h1>
-        <div class="sub">Fundstücke <b>melden</b>, <b>durchsuchen</b> und <b>wiedererlangen</b> — ein Vorgang, keine Zettelwirtschaft.</div>
     </div>
-    """, unsafe_allow_html=True)
+    """
 
-with col_zugang:
-    st.markdown('<div class="ctl-lbl">Zugang</div>', unsafe_allow_html=True)
-    role = st.selectbox("Rolle", ROLES, label_visibility="collapsed", key="role")
+
+def scroller(items: list, key_prefix: str):
+    """Karten in horizontal scrollbarer Zeile; Klick öffnet die Detailseite."""
+    if not items:
+        return
+    with st.container(key="scroller"):
+        cols = st.columns(len(items), gap="small")
+        for col, item in zip(cols, items):
+            with col:
+                st.markdown(card_html(item), unsafe_allow_html=True)
+                st.button("Ansehen", key=f"{key_prefix}_{item['id']}",
+                          on_click=open_item, args=(item["id"],), width="stretch")
+
+
+def section_head(title: str, tag: str = ""):
+    tag_html = f'<span class="tag">{html.escape(tag)}</span>' if tag else ""
+    st.markdown(f'<div class="sec"><h2>{html.escape(title)}</h2>{tag_html}</div>',
+                unsafe_allow_html=True)
+
+
+def apply_filters(items, query="", kat="Alle", status="Alle", ort="Alle Fundorte"):
+    q = (query or "").strip().lower()
+    out = list(items)
+    if q:
+        out = [
+            i for i in out
+            if q in str(i.get("titel", "")).lower()
+            or q in str(i.get("beschreibung", "")).lower()
+            or q in str(i.get("fundort", "")).lower()
+            or q in str(i.get("kategorie", "")).lower()
+            or any(q in str(t).lower() for t in i.get("tags", []))
+            or q in str(i.get("id", ""))
+        ]
+    if kat != "Alle":
+        out = [i for i in out if i.get("kategorie") == kat]
+    if status != "Alle":
+        out = [i for i in out if i.get("status") == status]
+    if ort != "Alle Fundorte":
+        out = [i for i in out if i.get("fundort") == ort]
+    return out
+
+
+# =============================================================================
+# 6. SIDEBAR
+# =============================================================================
+
+items_all = st.session_state["fundstuecke_liste"]
+
+with st.sidebar:
+    st.markdown(
+        f'<div style="text-align:center;padding:2px 0 4px;">'
+        f'<img src="{WORDMARK_URI}" style="width:150px;height:auto;" alt="kath.fund">'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="sblbl">Bereich</div>', unsafe_allow_html=True)
+    nav_labels = {"home": "Start", "search": "Alle Fundstücke", "erfassen": "Fund melden",
+                  "claim": "Fund beanspruchen", "admin": "Büro (Admin)"}
+    current = st.session_state["view"]
+    current_label = nav_labels.get(current, "Start") if current != "item" else "Alle Fundstücke"
+    chosen = st.radio("Bereich", list(nav_labels.values()),
+                      index=list(nav_labels.values()).index(current_label),
+                      label_visibility="collapsed", key="sidenav")
+    if nav_labels.get(st.session_state["view"]) != chosen:
+        for k, v in nav_labels.items():
+            if v == chosen:
+                st.session_state["view"] = k
+
+    st.markdown('<div class="sblbl">Filter</div>', unsafe_allow_html=True)
+    kat_filter = st.radio("Kategorie", ["Alle"] + CATEGORIES, key="f_kat",
+                          label_visibility="collapsed")
+    status_filter = st.radio("Status", ["Alle", "Offen", "Beansprucht", "Abgeholt"],
+                             key="f_status", label_visibility="collapsed")
+    ort_filter = st.selectbox("Fundort", ["Alle Fundorte"] + LOCATIONS,
+                              key="f_ort", label_visibility="collapsed")
+
+    st.markdown('<div class="sblbl">Zugang</div>', unsafe_allow_html=True)
+    role = st.selectbox("Rolle", ["Schüler:in", "Lehrkraft", "Hausmeister / Admin"],
+                        key="f_role", label_visibility="collapsed")
     st.session_state["current_role"] = role
-
     if role == "Hausmeister / Admin":
         pin = st.text_input("PIN", type="password", placeholder="PIN (Demo: 1234)",
-                            label_visibility="collapsed", key="pin")
+                            key="f_pin", label_visibility="collapsed")
         st.session_state["is_authenticated"] = (pin == "1234")
         if pin and pin != "1234":
             st.caption("PIN ungültig")
@@ -830,199 +751,206 @@ with col_zugang:
     else:
         st.session_state["is_authenticated"] = True
 
-    st.button("＋ Fundstück erfassen", width="stretch", key="cta_new",
-              on_click=nav_to, args=("Erfassen",))
-
-st.markdown(f"""
-<div class="kpis">
-    <div class="kpi"><span>Im Verzeichnis</span><b>{anz_gesamt}</b></div>
-    <div class="kpi"><span>Offen</span><b>{anz_offen}</b></div>
-    <div class="kpi"><span>Beansprucht</span><b>{anz_bean}</b></div>
-    <div class="kpi"><span>Abgeholt</span><b>{anz_abgeholt}</b></div>
-    <div class="kpi"><span>Prüfungen offen</span><b>{anz_offene_pruefung}</b></div>
-    <div class="kpi accent"><span>Rückführquote</span><b>{quote:.0f} %</b></div>
-</div>
-""", unsafe_allow_html=True)
-
-# Hauptnavigation — groß, immer sichtbar, nicht versteckt
-if "nav" not in st.session_state:
-    st.session_state["nav"] = "Katalog"
-
-with st.container(key="navwrap"):
-    nav = st.radio(
-        "Bereich",
-        ["Katalog", "Erfassen", "Beanspruchen", "Verwaltung"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="nav",
-    )
-
-st.markdown('<div style="border-bottom: 1.5px solid var(--ink); margin-bottom: 6px;"></div>',
-            unsafe_allow_html=True)
+    offen = sum(1 for i in items_all if i.get("status") == "Offen")
+    st.caption(f"{offen} Fundstück(e) offen · {heute.strftime('%d.%m.%Y')}")
 
 
 # =============================================================================
-# 6. BEREICH: KATALOG
+# 7. ANSICHT: START (HERO)
 # =============================================================================
 
-def render_katalog():
-    st.markdown("""
-    <div class="sec">
-        <h2>Fundverzeichnis</h2>
-        <span class="tag">Schnellsuche · Register · Raster</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # --- Ansichtsmodus (die drei Einstiege aus dem Papierentwurf) ---
-    col_mode, col_layout = st.columns([3, 1])
-    with col_mode:
-        with st.container(key="modefilter"):
-            mode = st.radio(
-                "Ansicht",
-                ["Alle Stücke", "Diese Woche gefunden", "A–Z Register"],
-                horizontal=True,
-                label_visibility="collapsed",
-                key="mode",
-            )
-    with col_layout:
-        with st.container(key="layoutsel"):
-            layout = st.radio(
-                "Darstellung",
-                ["Raster", "Liste"],
-                horizontal=True,
-                label_visibility="collapsed",
-                key="layout",
-            )
-
-    # --- Schnellsuche ---
-    col_q, col_ort = st.columns([3.2, 1])
-    with col_q:
-        with st.container(key="searchwrap"):
-            query = st.text_input(
-                "Schnellsuche",
-                placeholder="Schnellsuche — Jacke, Blau, Nike, AirPods oder #1002 …",
-                label_visibility="collapsed",
-                key="q",
-            )
-    with col_ort:
-        fundort_filter = st.selectbox("Fundort", ["Alle Fundorte"] + LOCATIONS + ["Unbekannt"],
-                                      label_visibility="collapsed", key="loc")
-
-    # --- Kategorien und Status als Klick-Chips ---
-    st.markdown('<div class="ctl-lbl">Kategorie</div>', unsafe_allow_html=True)
-    kat_filter = st.radio("Kategorie", ["Alle"] + CATEGORIES, horizontal=True,
-                          label_visibility="collapsed", key="cat")
-
-    st.markdown('<div class="ctl-lbl">Bearbeitungsstand</div>', unsafe_allow_html=True)
-    status_filter = st.radio("Status", ["Alle", "Offen", "Beansprucht", "Abgeholt"],
-                             horizontal=True, label_visibility="collapsed", key="status")
-
-    # --- Filtern ---
-    visible = list(st.session_state["fundstuecke_liste"])
-    q = (query or "").strip().lower()
-    if q:
-        visible = [
-            i for i in visible
-            if q in str(i.get("titel", "")).lower()
-            or q in str(i.get("beschreibung", "")).lower()
-            or q in str(i.get("fundort", "")).lower()
-            or q in str(i.get("kategorie", "")).lower()
-            or any(q in str(t).lower() for t in i.get("tags", []))
-            or q in str(i.get("id", ""))
-        ]
-    if kat_filter != "Alle":
-        visible = [i for i in visible if i.get("kategorie") == kat_filter]
-    if fundort_filter != "Alle Fundorte":
-        visible = [i for i in visible if i.get("fundort") == fundort_filter]
-    if status_filter != "Alle":
-        visible = [i for i in visible if i.get("status") == status_filter]
-    if mode == "Diese Woche gefunden":
-        visible = [i for i in visible if str(i.get("datum_fund", "")) >= neu_grenze]
-
-    if mode == "A–Z Register":
-        visible.sort(key=lambda i: str(i.get("titel", "")).lower())
-    else:
-        visible.sort(key=lambda i: str(i.get("datum_fund", "")), reverse=True)
-
-    if mode == "A–Z Register":
-        sort_hint = "alphabetisch"
-    elif mode == "Diese Woche gefunden":
-        sort_hint = "neu eingegangen"
-    else:
-        sort_hint = "neueste zuerst"
-
+def view_home():
     st.markdown(f"""
-    <div class="sec-note" style="margin-top:14px;">
-        <b>{len(visible)}</b> Eintragung(en) · Ansicht: {mode} · Sortierung: {sort_hint}
+    <div class="hero">
+        <img class="wordmark" src="{WORDMARK_URI}" alt="kath.fund">
+        <div class="kicker">Katharineum zu Lübeck · <em>Amtliches Fundverzeichnis</em></div>
     </div>
     """, unsafe_allow_html=True)
+
+    c_q, c_go = st.columns([3.4, 1])
+    with c_q:
+        with st.container(key="heroq"):
+            query = st.text_input("Suche", placeholder="Jacke, AirPods, Schlüsselbund, #1002 …",
+                                  label_visibility="collapsed", key="q_home")
+    with c_go:
+        with st.container(key="herogo"):
+            search_clicked = st.button("Suchen", width="stretch", key="go_home",
+                                       on_click=go, args=("search",))
+    if search_clicked and (query or "").strip():
+        st.session_state["q_search"] = query.strip()
+    if st.session_state.get("q_search") is None:
+        st.session_state.setdefault("q_search", "")
+
+    # --- Fund melden ---
+    st.markdown("""
+    <div class="report">
+        <h3>Etwas gefunden?</h3>
+        <p>Foto machen oder hochladen — die Kategorie wird automatisch vorgeschlagen.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    uploaded = st.file_uploader("Foto des Fundstücks", type=["jpg", "jpeg", "png", "webp"],
+                                key="home_upload", label_visibility="collapsed")
+    bcol = st.columns(2)
+    with bcol[0]:
+        st.button("📷 Fund jetzt melden", key="reportbtn", width="stretch",
+                  on_click=go, args=("erfassen",))
+    if uploaded is not None:
+        st.session_state["pending_photo"] = uploaded.getvalue()
+        st.toast("Foto übernommen — Details ergänzen", icon="📷")
+        if st.button("Weiter mit diesem Foto →", key="reportbtn2", width="stretch",
+                     on_click=go, args=("erfassen",)):
+            pass
+
+    # --- Neu ---
+    neue = sorted([i for i in items_all if i.get("status") in ("Offen", "Beansprucht")],
+                  key=lambda i: str(i.get("datum_fund", "")), reverse=True)[:8]
+    section_head("Neu im Fundbüro", "letzte Tage")
+    if neue:
+        scroller(neue, "new")
+    else:
+        st.markdown('<div class="empty">Noch keine Fundstücke</div>', unsafe_allow_html=True)
+
+    # --- Kategorien ---
+    for kat in CATEGORIES[:4]:
+        kat_items = sorted([i for i in items_all if i.get("kategorie") == kat],
+                           key=lambda i: str(i.get("datum_fund", "")), reverse=True)
+        if not kat_items:
+            continue
+        section_head(kat, f"{len(kat_items)} Stück(e)")
+        scroller(kat_items[:8], f"kat{CATEGORIES.index(kat)}")
+
+
+# =============================================================================
+# 8. ANSICHT: SUCHE / KATALOG
+# =============================================================================
+
+def view_search():
+    query = st.text_input("Suche", placeholder="Suchbegriff oder Belegnummer …",
+                          key="q_search", label_visibility="collapsed")
+    visible = apply_filters(items_all, query,
+                            st.session_state.get("f_kat", "Alle"),
+                            st.session_state.get("f_status", "Alle"),
+                            st.session_state.get("f_ort", "Alle Fundorte"))
+    visible.sort(key=lambda i: str(i.get("datum_fund", "")), reverse=True)
+
+    n = len(visible)
+    st.markdown(f'<div class="sec-note"><b>{n}</b> Treffer · Filter liegen in der Sidebar (Wappen oben links)</div>',
+                unsafe_allow_html=True)
 
     if not visible:
-        st.markdown("""
-        <div class="empty">
-            Keine Eintragung passt zu dieser Auswahl<br>
-            <span style="text-transform:none; letter-spacing:0;">Suchbegriff ändern oder Kategorie- und Statusfilter zurücksetzen.</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("""<div class="empty">Keine Treffer<br>
+        <span style="text-transform:none;letter-spacing:0;">Anderen Suchbegriff probieren oder Filter zurücksetzen.</span></div>""",
+                    unsafe_allow_html=True)
         return
 
-    if layout == "Raster":
-        for block in range(0, len(visible), 3):
-            cols = st.columns(3, gap="medium")
-            for slot in range(3):
-                pos = block + slot
-                if pos >= len(visible):
-                    continue
-                item = visible[pos]
-                with cols[slot]:
-                    st.markdown(ticket_html(item, str(item.get("datum_fund", "")) >= neu_grenze),
-                                unsafe_allow_html=True)
-                    if item.get("status") in ("Offen", "Beansprucht"):
-                        st.button("Anspruch prüfen", key=f"claim_btn_{item.get('id')}", width="stretch",
-                                  on_click=request_claim, args=(item.get("id"),))
-    else:
-        for item in visible:
-            st.markdown(row_html(item, str(item.get("datum_fund", "")) >= neu_grenze),
-                        unsafe_allow_html=True)
-            if item.get("status") in ("Offen", "Beansprucht"):
-                st.button("Anspruch prüfen", key=f"claim_row_{item.get('id')}",
-                          on_click=request_claim, args=(item.get("id"),))
+    # Handy: 1 Spalte, iPad: 2, Desktop: 3
+    per_row = 3
+    for block in range(0, n, per_row):
+        cols = st.columns(per_row, gap="medium")
+        for slot in range(per_row):
+            pos = block + slot
+            if pos >= n:
+                continue
+            item = visible[pos]
+            with cols[slot]:
+                st.markdown(card_html(item), unsafe_allow_html=True)
+                if item.get("status") in ("Offen", "Beansprucht"):
+                    st.button("Ansehen & beanspruchen", key=f"sq_{item['id']}",
+                              on_click=open_item, args=(item["id"],), width="stretch")
+                else:
+                    st.button("Ansehen", key=f"sq_{item['id']}",
+                              on_click=open_item, args=(item["id"],), width="stretch")
 
 
 # =============================================================================
-# 7. BEREICH: ERFASSEN
+# 9. ANSICHT: DETAIL
 # =============================================================================
 
-def render_erfassen():
-    st.markdown("""
-    <div class="sec">
-        <h2>Fundstück aufnehmen</h2>
-        <span class="tag">Lichtbild · automatische Zuordnung · Eintrag</span>
+def view_item():
+    item_id = st.session_state.get("item_id")
+    item = next((i for i in items_all if i["id"] == item_id), None)
+    if item is None:
+        st.warning("Fundstück nicht gefunden.")
+        st.button("← Zurück", on_click=go, args=("search",))
+        return
+
+    st.button("← Zurück", key="back_item", on_click=go, args=("search",))
+    titel = html.escape(str(item.get("titel", "")))
+    neu = '<span class="newflag">Neu</span>' if is_new(item) else ""
+
+    st.markdown(f"""
+    <div class="detail-head"><h2>{titel}</h2>{neu}
+        <span class="stamp s-{str(item.get('status', 'Offen')).lower()}">{item.get('status', 'Offen')}</span>
     </div>
-    <div class="sec-note">Foto aufnehmen oder hochladen — die Zuordnung erfolgt automatisch, Korrektur jederzeit möglich.</div>
     """, unsafe_allow_html=True)
 
-    col_bild, col_form = st.columns([1, 1.1], gap="large")
+    img_col, info_col = st.columns([1, 1], gap="large")
+    with img_col:
+        loaded = load_item_image(item.get("image_file"))
+        if loaded is not None:
+            preview = loaded.copy()
+            preview.thumbnail((900, 900), Image.Resampling.LANCZOS)
+            st.image(preview, width="stretch")
+        else:
+            st.markdown(f'<div class="ticket-photo ph" style="height:240px;">'
+                        f'{html.escape(item.get("kategorie", ""))}</div>', unsafe_allow_html=True)
+        chips = "".join(f'<span class="chip">{html.escape(str(t))}</span>'
+                        for t in item.get("tags", []))
+        if chips:
+            st.markdown(f'<div style="margin-top:8px;">{chips}</div>', unsafe_allow_html=True)
 
+    with info_col:
+        st.markdown(f"""
+        <div class="panel">
+            <dl class="dgrid">
+                <dt>Kategorie</dt><dd>{html.escape(item.get('kategorie', ''))}</dd>
+                <dt>Fundort</dt><dd>{html.escape(item.get('fundort', ''))}</dd>
+                <dt>Gefunden am</dt><dd>{html.escape(item.get('datum_fund', ''))}</dd>
+                <dt>Lagerort</dt><dd>{html.escape(item.get('abgabeort', ''))}</dd>
+                <dt>Abholen bis</dt><dd>{html.escape(item.get('datum_ablauf', ''))}</dd>
+            </dl>
+            <div class="note"><b>Beschreibung</b><span>{html.escape(item.get('beschreibung', ''))}</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if item.get("status") in ("Offen", "Beansprucht"):
+            st.button("Das ist meins — Anspruch melden", key="claim_detail", width="stretch",
+                      on_click=request_claim, args=(item["id"],))
+        else:
+            st.caption("Dieses Fundstück wurde bereits abgeholt oder ist nicht mehr verfügbar.")
+
+
+# =============================================================================
+# 10. ANSICHT: FUND MELDEN
+# =============================================================================
+
+def view_erfassen():
+    st.button("← Zurück", key="back_add", on_click=go, args=("home",))
+    section_head("Fund melden", "Foto · Vorschlag · Eintrag")
+    st.markdown('<div class="sec-note">Foto aufnehmen oder hochladen — die Zuordnung erfolgt automatisch, Korrektur jederzeit möglich.</div>',
+                unsafe_allow_html=True)
+
+    col_bild, col_form = st.columns([1, 1.1], gap="large")
     uploaded_pil = None
     ai_category = CATEGORIES[0]
     ai_confidence = 0.0
     ai_engine = "Standby"
 
     with col_bild:
-        st.markdown("#### Lichtbild")
-        upload_mode = st.radio("Eingabeweg", ["Datei hochladen", "Kamera auslösen"],
-                               horizontal=True, key="upload_mode")
-
-        if upload_mode == "Datei hochladen":
-            img_file = st.file_uploader("Bild auswählen", type=["jpg", "jpeg", "png", "webp"],
-                                        key="file_upload_input")
+        pending = st.session_state.get("pending_photo")
+        if pending is not None and "pending_consumed" not in st.session_state:
+            uploaded_pil = Image.open(io.BytesIO(pending)).convert("RGB")
+        else:
+            upload_mode = st.radio("Eingabeweg", ["Datei hochladen", "Kamera auslösen"],
+                                   horizontal=True, key="upload_mode")
+            if upload_mode == "Datei hochladen":
+                img_file = st.file_uploader("Bild auswählen", type=["jpg", "jpeg", "png", "webp"],
+                                            key="file_upload_input", label_visibility="collapsed")
+            else:
+                img_file = st.camera_input("Kamera auslösen", key="cam_input",
+                                           label_visibility="collapsed")
             if img_file is not None:
                 uploaded_pil = Image.open(img_file).convert("RGB")
-        else:
-            cam_file = st.camera_input("Kamera auslösen", key="cam_input")
-            if cam_file is not None:
-                uploaded_pil = Image.open(cam_file).convert("RGB")
 
         if uploaded_pil is not None:
             preview = uploaded_pil.copy()
@@ -1030,7 +958,6 @@ def render_erfassen():
             st.image(preview, caption="Aufnahme für den Beleg", width="stretch")
             with st.spinner("Zuordnung läuft"):
                 ai_category, ai_confidence, ai_engine = analyze_image_ai(uploaded_pil)
-
             if ai_category not in CATEGORIES:
                 ai_category = "Sonstiges"
 
@@ -1044,77 +971,48 @@ def render_erfassen():
             </div>
             """, unsafe_allow_html=True)
             if ai_confidence < 0.60:
-                st.markdown("""
-                <div class="ai-warn"><b>Unsicherer Vorschlag:</b> Bitte die Kategorie rechts unbedingt prüfen. Ein Bildmodell kann ähnliche Gegenstände verwechseln.</div>
-                """, unsafe_allow_html=True)
+                st.markdown("""<div class="ai-warn"><b>Unsicherer Vorschlag:</b> Bitte die Kategorie
+                rechts unbedingt prüfen. Ein Bildmodell kann ähnliche Gegenstände verwechseln.</div>""",
+                            unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div class="empty">
-                Noch kein Lichtbild<br>
-                <span style="text-transform:none; letter-spacing:0;">Ohne Foto lässt sich ein Fundstück trotzdem vollständig erfassen.</span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("""<div class="empty">Noch kein Lichtbild<br>
+            <span style="text-transform:none;letter-spacing:0;">Ohne Foto lässt sich ein Fundstück trotzdem erfassen.</span></div>""",
+                        unsafe_allow_html=True)
 
     with col_form:
-        st.markdown("#### Angaben zum Fundstück")
         with st.form("form_add_item", clear_on_submit=True):
             in_titel = st.text_input("Bezeichnung*", placeholder="z. B. Dunkelblaue Regenjacke, Größe M")
-
-            if ai_category not in CATEGORIES:
-                ai_category = "Sonstiges"
-
             st.markdown(f"""
-            <div class="note">
-                <b>Modellvorschlag:</b> {html.escape(ai_category)}
-                <span>Automatisch aus dem Lichtbild abgeleitet. Bitte unten bestätigen oder ändern.</span>
-            </div>
+            <div class="note"><b>Modellvorschlag:</b> {html.escape(ai_category)}
+            <span>Automatisch aus dem Lichtbild abgeleitet. Bitte unten bestätigen oder ändern.</span></div>
             """, unsafe_allow_html=True)
             in_kategorie = st.selectbox(
-                "Kategorie bestätigen*",
-                CATEGORIES,
+                "Kategorie bestätigen*", CATEGORIES,
                 index=CATEGORIES.index(ai_category) if ai_category in CATEGORIES else len(CATEGORIES) - 1,
             )
-
             c1, c2 = st.columns(2)
             with c1:
                 in_fundort = st.selectbox("Fundort*", LOCATIONS)
             with c2:
                 in_abgabeort = st.text_input("Lagerort*", value="Hausmeisterbüro (Raum 001)")
-
             in_tags = st.text_input("Schlagworte", placeholder="kommagetrennt, z. B. Nike, Blau, Größe L")
-            in_beschreibung = st.text_area("Besondere Merkmale", height=110,
+            in_beschreibung = st.text_area("Besondere Merkmale", height=100,
                                            placeholder="Kratzer, Initialen, Anhänger, Inhalt …")
 
-            c3, c4 = st.columns(2)
-            with c3:
-                in_kuerzel = st.text_input("Melder-Kürzel*", placeholder="z. B. MAX-8B")
-            with c4:
-                in_rolle = st.selectbox("Rolle der findenden Person",
-                                        ["Schüler:in", "Lehrkraft", "Hausmeister", "Sonstige"])
-
-            st.caption("Personenbezogene Daten bleiben geschützt im Hausmeisterprotokoll.")
-
             if st.form_submit_button("Eintrag ins Fundbuch übernehmen", width="stretch"):
-                if not in_titel.strip() or not in_kuerzel.strip():
-                    st.error("Bezeichnung und Melder-Kürzel sind Pflichtfelder.")
+                if not in_titel.strip():
+                    st.error("Bitte eine Bezeichnung angeben.")
                 else:
                     items = st.session_state["fundstuecke_liste"]
                     new_id = max([i["id"] for i in items]) + 1 if items else 1001
-
                     saved_img_name = save_uploaded_image(uploaded_pil, new_id) if uploaded_pil is not None else None
-
-                    parsed_tags = [t.strip() for t in in_tags.split(",") if t.strip()]
-                    if not parsed_tags:
-                        parsed_tags = [ai_category.split(" ")[0]]
-
+                    parsed_tags = [t.strip() for t in in_tags.split(",") if t.strip()] or [ai_category.split(" ")[0]]
                     neues_item = {
                         "id": new_id,
                         "titel": in_titel.strip(),
                         "kategorie": in_kategorie,
                         "fundort": in_fundort,
                         "abgabeort": in_abgabeort.strip() or "Hausmeisterbüro (Raum 001)",
-                        "kontakt_kuerzel": in_kuerzel.strip().upper(),
-                        "finder_rolle": in_rolle,
                         "datum_fund": heute.strftime("%Y-%m-%d"),
                         "datum_ablauf": (heute + datetime.timedelta(days=90)).strftime("%Y-%m-%d"),
                         "status": "Offen",
@@ -1122,42 +1020,34 @@ def render_erfassen():
                         "image_file": saved_img_name,
                         "tags": parsed_tags,
                     }
-
-                    st.session_state["fundstuecke_liste"].insert(0, neues_item)
-                    log_action(in_kuerzel.strip().upper(), f"Fundstück #{new_id} registriert ({in_titel.strip()})")
+                    items.insert(0, neues_item)
+                    log_action("FUND-MELDUNG", f"Fundstück #{new_id} registriert ({in_titel.strip()})")
+                    st.session_state["pending_photo"] = None
+                    st.session_state["item_id"] = new_id
+                    st.session_state["view"] = "item"
                     st.toast(f"Beleg #{new_id} angelegt", icon="✅")
                     st.rerun()
 
 
 # =============================================================================
-# 8. BEREICH: BEANSPRUCHEN
+# 11. ANSICHT: BEANSPRUCHEN
 # =============================================================================
 
-def render_beanspruchen():
-    st.markdown("""
-    <div class="sec">
-        <h2>Fundstück beanspruchen</h2>
-        <span class="tag">Nachweis · Prüfung · Aushändigung</span>
-    </div>
-    <div class="sec-note">Eigentum wird geprüft: Je genauer der Nachweis, desto schneller die Aushändigung.</div>
-    """, unsafe_allow_html=True)
+def view_claim():
+    st.button("← Zurück", key="back_claim", on_click=go, args=("search",))
+    section_head("Fundstück beanspruchen", "Nachweis · Prüfung · Aushändigung")
+    st.markdown('<div class="sec-note">Eigentum wird geprüft: Je genauer der Nachweis, desto schneller die Aushändigung.</div>',
+                unsafe_allow_html=True)
 
-    offene = [i for i in st.session_state["fundstuecke_liste"]
-              if i.get("status") in ("Offen", "Beansprucht")]
-
+    offene = [i for i in items_all if i.get("status") in ("Offen", "Beansprucht")]
     if not offene:
-        st.markdown("""
-        <div class="empty">
-            Zurzeit liegt kein beanspruchbares Fundstück vor<br>
-            <span style="text-transform:none; letter-spacing:0;">Sobald etwas abgegeben wird, erscheint es hier.</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("""<div class="empty">Zurzeit liegt kein beanspruchbares Fundstück vor</div>""",
+                    unsafe_allow_html=True)
         return
 
     labels = {f"#{i['id']} — {i['titel']} ({i['fundort']})": i["id"] for i in offene}
     optionen = list(labels.keys())
 
-    # Vorauswahl, falls aus dem Katalog heraus "Anspruch prüfen" gedrückt wurde
     ziel = st.session_state.pop("claim_target", None)
     default_index = 0
     if ziel is not None:
@@ -1165,27 +1055,21 @@ def render_beanspruchen():
             if labels[label] == ziel:
                 default_index = pos
                 break
-        st.session_state.pop("claim_item", None)
 
     col_info, col_nachweis = st.columns([1, 1], gap="large")
-
     with col_info:
         st.markdown("#### Beleg wählen")
         gewaehlt = st.selectbox("Fundstück", optionen, index=default_index,
                                 label_visibility="collapsed", key="claim_item")
-        ziel_item = next(i for i in st.session_state["fundstuecke_liste"] if i["id"] == labels[gewaehlt])
-
-        st.markdown(ticket_html(ziel_item, False), unsafe_allow_html=True)
+        ziel_item = next(i for i in items_all if i["id"] == labels[gewaehlt])
+        st.markdown(card_html(ziel_item), unsafe_allow_html=True)
 
     with col_nachweis:
         st.markdown("#### Eigentumsnachweis")
         with st.form("form_claim"):
             c_name = st.text_input("Name und Klasse*", placeholder="z. B. Julia Koch (9b)")
-            c_proof = st.text_area(
-                "Nachweis*",
-                height=150,
-                placeholder="Merkmale, die nur die rechtmäßige Besitzerin oder der Besitzer kennt: Inhalt, Gravur, Sperrbildschirm, Initialen …",
-            )
+            c_proof = st.text_area("Nachweis*", height=140,
+                                   placeholder="Merkmale, die nur die rechtmäßige Besitzerin oder der Besitzer kennt: Inhalt, Gravur, Sperrbildschirm, Initialen …")
             if st.form_submit_button("Anspruch zur Prüfung einreichen", width="stretch"):
                 if not c_name.strip() or not c_proof.strip():
                     st.error("Name und Nachweis sind Pflichtfelder.")
@@ -1207,52 +1091,40 @@ def render_beanspruchen():
 
 
 # =============================================================================
-# 9. BEREICH: VERWALTUNG
+# 12. ANSICHT: ADMIN
 # =============================================================================
 
-def render_verwaltung():
-    st.markdown("""
-    <div class="sec">
-        <h2>Verwaltung</h2>
-        <span class="tag">Ansprüche · Kennzahlen · Register · Protokoll</span>
-    </div>
-    """, unsafe_allow_html=True)
+def view_admin():
+    st.button("← Zurück", key="back_admin", on_click=go, args=("home",))
+    section_head("Büro", "Ansprüche · Register · Protokoll")
 
     if st.session_state["current_role"] != "Hausmeister / Admin":
-        st.info("Dieser Bereich gehört zum Hausmeisterbüro. Rolle im Kopfbereich auf „Hausmeister / Admin“ stellen.")
+        st.info("Dieser Bereich gehört zum Hausmeisterbüro. Rolle in der Sidebar auf „Hausmeister / Admin“ stellen.")
         return
-
     if not st.session_state["is_authenticated"]:
-        st.warning("PIN erforderlich. Bitte im Kopfbereich unter „Zugang“ eingeben (Demo: 1234).")
+        st.warning("PIN erforderlich. Bitte in der Sidebar unter „Zugang“ eingeben (Demo: 1234).")
         return
 
-    tab_claims, tab_kpi, tab_register, tab_log = st.tabs(
-        ["Ansprüche", "Kennzahlen", "Register", "Protokoll & Export"]
-    )
+    tab_claims, tab_register, tab_log = st.tabs(["Ansprüche", "Register", "Protokoll & Export"])
 
     with tab_claims:
         claims = st.session_state["claims"]
         if not claims:
             st.markdown('<div class="empty">Keine Ansprüche im Eingang</div>', unsafe_allow_html=True)
         for c in claims:
-            rel = next((i for i in st.session_state["fundstuecke_liste"] if i["id"] == c["item_id"]), None)
+            rel = next((i for i in items_all if i["id"] == c["item_id"]), None)
             titel = rel["titel"] if rel else "Gelöschtes Fundstück"
             status_slug = "abgeholt" if c["status"] == "Genehmigt" else ("entsorgt" if c["status"] == "Abgelehnt" else "beansprucht")
-
             with st.expander(f"Anspruch #{c['claim_id']} · Beleg #{c['item_id']} · {titel}"):
                 st.markdown(f"""
-                <div class="note">
-                    <b>{html.escape(str(c['name']))}</b>
-                    <span>Eingereicht am {c['datum']} · Status {c['status']}</span>
-                </div>
-                <div class="tdesc" style="border-top:none;">{html.escape(str(c['proof']))}</div>
+                <div class="note"><b>{html.escape(str(c['name']))}</b>
+                <span>Eingereicht am {c['datum']} · Status {c['status']}</span></div>
+                <div style="margin:6px 0 10px;">{html.escape(str(c['proof']))}</div>
                 <div style="margin-bottom:10px;"><span class="stamp s-{status_slug}">{c['status']}</span></div>
                 """, unsafe_allow_html=True)
-
                 b1, b2 = st.columns(2)
                 with b1:
-                    if st.button("Genehmigen & Aushändigung vermerken", key=f"app_{c['claim_id']}",
-                                 width="stretch"):
+                    if st.button("Genehmigen & aushändigen", key=f"app_{c['claim_id']}", width="stretch"):
                         c["status"] = "Genehmigt"
                         if rel:
                             rel["status"] = "Abgeholt"
@@ -1268,37 +1140,8 @@ def render_verwaltung():
                         sync_storage()
                         st.rerun()
 
-    with tab_kpi:
-        df = pd.DataFrame(st.session_state["fundstuecke_liste"])
-        if df.empty:
-            st.markdown('<div class="empty">Keine Daten</div>', unsafe_allow_html=True)
-            return
-
-        st.markdown(f"""
-        <div class="kpis">
-            <div class="kpi"><span>Registriert</span><b>{anz_gesamt}</b></div>
-            <div class="kpi"><span>Ausgehändigt</span><b>{anz_abgeholt}</b></div>
-            <div class="kpi"><span>Rückführquote</span><b>{quote:.0f} %</b></div>
-            <div class="kpi"><span>Offene Prüfungen</span><b>{anz_offene_pruefung}</b></div>
-            <div class="kpi"><span>Kategorien</span><b>{df['kategorie'].nunique()}</b></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("##### Verteilung nach Kategorien")
-            st.bar_chart(df["kategorie"].value_counts(), color="#B23A2A")
-        with c2:
-            st.markdown("##### Verteilung nach Fundorten")
-            st.bar_chart(df["fundort"].value_counts(), color="#2B4C7E")
-
     with tab_register:
-        df = pd.DataFrame(st.session_state["fundstuecke_liste"])
-        spalten = [c for c in ["id", "titel", "kategorie", "fundort", "status", "datum_fund", "datum_ablauf"] if c in df.columns]
-        st.dataframe(df[spalten], width="stretch", hide_index=True)
-
-        st.markdown("##### Fristenprüfung")
-        faellig = [i for i in st.session_state["fundstuecke_liste"]
+        faellig = [i for i in items_all
                    if str(i.get("datum_ablauf", "")) < heute.strftime("%Y-%m-%d") and i.get("status") == "Offen"]
         if faellig:
             st.warning(f"{len(faellig)} Fundstück(e) haben die 90-Tage-Frist überschritten.")
@@ -1310,13 +1153,14 @@ def render_verwaltung():
                 st.rerun()
         else:
             st.markdown('<div class="empty">Alle Fristen im grünen Bereich</div>', unsafe_allow_html=True)
+        for item in items_all:
+            st.markdown(card_html(item), unsafe_allow_html=True)
 
     with tab_log:
-        logs = pd.DataFrame(st.session_state["audit_logs"])
-        st.dataframe(logs, width="stretch", hide_index=True)
-
+        for entry in st.session_state["audit_logs"][:40]:
+            st.caption(f"{entry['timestamp']} · {entry['user']} · {entry['action']}")
         export = {
-            "items": st.session_state["fundstuecke_liste"],
+            "items": items_all,
             "claims": st.session_state["claims"],
             "audit_logs": st.session_state["audit_logs"],
             "export_date": datetime.datetime.now().isoformat(),
@@ -1325,20 +1169,26 @@ def render_verwaltung():
             "Gesamtes Fundverzeichnis herunterladen (JSON)",
             data=json.dumps(export, ensure_ascii=False, indent=2),
             file_name=f"kath_fund_export_{heute.strftime('%Y%m%d')}.json",
-            mime="application/json",
-            width="stretch",
+            mime="application/json", width="stretch",
         )
 
 
 # =============================================================================
-# 10. AUSGABE
+# 13. ROUTER
 # =============================================================================
 
-if nav == "Katalog":
-    render_katalog()
-elif nav == "Erfassen":
-    render_erfassen()
-elif nav == "Beanspruchen":
-    render_beanspruchen()
+view = st.session_state["view"]
+if view == "home":
+    view_home()
+elif view == "search":
+    view_search()
+elif view == "item":
+    view_item()
+elif view == "erfassen":
+    view_erfassen()
+elif view == "claim":
+    view_claim()
+elif view == "admin":
+    view_admin()
 else:
-    render_verwaltung()
+    view_home()
