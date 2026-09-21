@@ -492,7 +492,7 @@ UI = r"""
   <!-- ============ HOME ============ -->
   <div id="view-home" class="max-w-6xl mx-auto px-4 pb-10">
     <div class="dots rounded-2xl -mx-4 px-4 pt-7 pb-5 relative overflow-hidden">
-      <img id="heroImg" src="" alt="" class="absolute right-4 md:right-16 top-1/2 -translate-y-1/2 w-28 md:w-36 opacity-90 transition-all duration-700 pointer-events-none" style="filter: drop-shadow(0 10px 18px rgba(24,24,27,.15));">
+      <div id="heroFly" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
       <img src="__LOGO__" class="w-52 md:w-60 mx-auto" alt="kath.fund">
     </div>
 
@@ -785,20 +785,49 @@ function init() {
     <div class="icard p-2.5"><p class="lbl">Abgeholt</p><p class="text-lg font-extrabold text-[var(--ok)]">${items.filter(i=>i.status==='Abgeholt').length}</p></div>
     <div class="icard p-2.5"><p class="lbl">Gesamt</p><p class="text-lg font-extrabold">${items.length}</p></div>`;
   renderChips();
-  // Hero-Bilder rotieren alle 4s
+  // Hero: fliegende Objekte, random Richtung/Position, langsam + leicht gedreht
   const heroImgs = DATA.hero || [];
-  if (heroImgs.length) {
-    let hi = 0;
-    const el = $('#heroImg');
-    el.src = heroImgs[0]; el.style.opacity = .9;
-    setInterval(() => {
-      el.style.opacity = 0; el.style.transform = 'translateY(-50%) scale(.9)';
-      setTimeout(() => {
-        hi = (hi + 1) % heroImgs.length;
-        el.src = heroImgs[hi];
-        el.style.opacity = .9; el.style.transform = 'translateY(-50%) scale(1)';
-      }, 350);
-    }, 4000);
+  const flyBox = $('#heroFly');
+  if (heroImgs.length && flyBox) {
+    // lane oben oder unten, nie hinter dem logo-band
+    const lane = () => (Math.random() < .5)
+      ? 8 + Math.random() * 22          // oberer rand
+      : 68 + Math.random() * 24;        // unterer rand
+    function spawnFly() {
+      if (document.hidden) return;
+      const src = heroImgs[Math.floor(Math.random() * heroImgs.length)];
+      const el = document.createElement('img');
+      el.src = src;
+      el.style.position = 'absolute';
+      el.style.opacity = '0';
+      el.style.filter = 'drop-shadow(0 10px 16px rgba(24,24,27,.14))';
+      el.style.willChange = 'transform';
+      flyBox.appendChild(el);
+      el.onload = () => {
+        // scale: lange bilder richten sich nach der hoehe
+        const ar = el.naturalWidth / el.naturalHeight;
+        const h = ar < 0.8 ? 90 + Math.random() * 40 : 64 + Math.random() * 36;
+        const w = h * ar;
+        el.style.width = w + 'px';
+        const ltr = Math.random() < .5;
+        const boxW = flyBox.clientWidth || 600;
+        const y = lane();
+        const rot = (Math.random() * 14 - 7);
+        const rot2 = (Math.random() * 10 - 5);
+        const dur = 14000 + Math.random() * 8000;   // langsam
+        el.style.top = y + '%';
+        const from = ltr ? -w - 40 : boxW + 40;
+        const to = ltr ? boxW + 40 : -w - 40;
+        el.animate([
+          { transform: `translateX(${from}px) rotate(${rot}deg)`, opacity: 0 },
+          { transform: `translateX(${from * .75 + to * .25}px) rotate(${(rot + rot2) / 2}deg)`, opacity: .85, offset: .12 },
+          { transform: `translateX(${from * .25 + to * .75}px) rotate(${rot2}deg)`, opacity: .85, offset: .88 },
+          { transform: `translateX(${to}px) rotate(${rot}deg)`, opacity: 0 }
+        ], { duration: dur, easing: 'linear' }).onfinish = () => el.remove();
+      };
+    }
+    spawnFly();
+    setInterval(spawnFly, 3200);
   }
   fitHeight();
 }
