@@ -1,6 +1,6 @@
-streamlit>=1.40
-tensorflow>=2.12
-pillow
-numpy
-pandas
-qrcode[pil]        # Nur wenn du QR-Codes doch noch brauchst – sonst weglassen
+streamlit>=1.40,<2
+pillow>=10
+numpy>=1.26
+pandas>=2.2
+qrcode[pil]>=7.4
+h5py>=3.11
