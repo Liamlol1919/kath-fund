@@ -420,26 +420,9 @@ UI = r"""
     --ok: #16A34A; --info: #2563EB; --warn: #D97706;
   }
   * { -webkit-font-smoothing: antialiased; }
-  body { font-family: 'Inter', -apple-system, sans-serif; background: #101014;
+  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg);
          color: var(--fg); margin: 0; }
-  .app { background: var(--bg); display: flex; flex-direction: column; height: 100%; }
-
-  /* ---------- iPad-Rahmen (nur Laptop/Desktop) ---------- */
-  .stage { min-height: 100vh; display: flex; align-items: center; justify-content: center;
-           padding: 24px 0; background:
-             radial-gradient(1200px 600px at 20% -10%, #23232B 0%, transparent 60%),
-             radial-gradient(1000px 700px at 110% 110%, #1B2B33 0%, transparent 55%), #101014; }
-  .device { position: relative; height: min(94vh, 1100px); aspect-ratio: 870 / 1289; }
-  .device-frame { position: absolute; inset: 0; width: 100%; height: 100%;
-                  background-size: 100% 100%; pointer-events: none; z-index: 10; }
-  .device-screen { position: absolute; left: 2.5%; top: 10.3%; right: 6.1%; bottom: 10.4%;
-                   border-radius: 14px; overflow: hidden; background: var(--bg); }
-  @media (max-width: 767px) {
-    .stage { padding: 0; background: var(--bg); }
-    .device { height: 100vh; aspect-ratio: auto; width: 100vw; }
-    .device-frame { display: none; }
-    .device-screen { position: fixed; inset: 0; border-radius: 0; }
-  }
+  .app { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
 
   /* ---------- Typo & Basis (shadcn-Vibe) ---------- */
   .lbl { font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
@@ -466,10 +449,7 @@ UI = r"""
 </style>
 </head>
 <body>
-<div class="stage">
-<div class="device">
-  <div class="device-screen">
-  <div class="app">
+<div class="app">
 
   <!-- ============ TOPBAR ============ -->
   <div class="bg-white/90 backdrop-blur border-b border-[var(--line)] sticky top-0 z-30 flex items-center gap-2 px-3 py-2">
@@ -489,7 +469,7 @@ UI = r"""
   </div>
 
   <!-- ============ HOME ============ -->
-  <div id="view-home" class="flex-1 overflow-y-auto px-4 pb-10">
+  <div id="view-home" class="flex-1 px-4 pb-10">
     <div class="dots rounded-2xl -mx-4 px-4 pt-7 pb-5 text-center">
       <img src="__LOGO__" class="w-52 md:w-60 mx-auto" alt="kath.fund">
     </div>
@@ -560,12 +540,6 @@ UI = r"""
   </div>
 
   </div><!-- /app -->
-  </div><!-- /screen -->
-
-  <!-- iPad-Rahmen als background-image -->
-  <div class="device-frame" style="background-image:url('__IPAD__')"></div>
-</div><!-- /device -->
-</div><!-- /stage -->
 
 <!-- ============ DRAWER ============ -->
 <dialog id="drawer" class="modal modal-start">
@@ -780,16 +754,6 @@ function init() {
 }
 init();
 
-/* ---------- iframe auf volle Hoehe zwingen ---------- */
-try {
-  const ifr = window.parent.document.querySelector('iframe[title="streamlit_component"], iframe');
-  if (ifr && ifr.contentWindow === window) {
-    ifr.style.position = 'fixed'; ifr.style.inset = '0';
-    ifr.style.width = '100vw'; ifr.style.height = '100vh';
-    ifr.style.border = 'none'; ifr.style.zIndex = '9999';
-    window.parent.document.documentElement.style.overflow = 'hidden';
-  }
-} catch (e) { /* fallback: normale component-hoehe */ }
 </script>
 </body>
 </html>
@@ -799,8 +763,16 @@ UI = (UI
       .replace("__WORDMARK__", wordmark)
       .replace("__LOGOTOP__", logo_top)
       .replace("__LOGO__", logo_main)
-      .replace("__IPAD__", ipad_frame)
       .replace("__DATA__", data_json)
       .replace("__FLASH__", flash.replace("'", "\\'")))
 
-components.html(UI, height=1400, scrolling=False)
+st.markdown("""
+<style>
+  header[data-testid="stHeader"] { display: none !important; }
+  .block-container, [data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
+  [data-testid="stAppViewContainer"] { background: #101014; }
+  section[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
+
+components.html(UI, height=1400, scrolling=True)
