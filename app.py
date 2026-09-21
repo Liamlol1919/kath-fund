@@ -421,8 +421,9 @@ UI = r"""
   }
   * { -webkit-font-smoothing: antialiased; }
   body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg);
-         color: var(--fg); margin: 0; }
-  .app { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+         color: var(--fg); margin: 0; padding-top: 0; }
+  html, body { margin-top: 0 !important; }
+  .app { background: var(--bg); }
 
   /* ---------- Typo & Basis (shadcn-Vibe) ---------- */
   .lbl { font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
@@ -451,14 +452,15 @@ UI = r"""
 <body>
 <div class="app">
 
-  <!-- ============ TOPBAR ============ -->
-  <div class="bg-white/90 backdrop-blur border-b border-[var(--line)] sticky top-0 z-30 flex items-center gap-2 px-3 py-2">
-    <button class="btn btn-ghost btn-sm btn-square" onclick="drawer.open()">
-      <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-    </button>
-    <img src="__LOGO__" class="h-7 w-auto mx-auto" alt="kath.fund">
-    <button class="btn btn-accent btn-sm ml-auto" onclick="openReport('camera')">＋ Melden</button>
-  </div>
+  <!-- floating sidebar-button + FAB -->
+  <button class="fixed top-3 left-3 z-40 w-10 h-10 rounded-xl bg-white border border-[var(--line)] shadow-sm flex items-center justify-center"
+          onclick="drawer.open()" aria-label="Menü">
+    <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <button class="fixed bottom-4 right-4 z-40 h-12 px-4 rounded-full btn-accent shadow-lg text-sm font-semibold flex items-center gap-2"
+          onclick="openReport('camera')">
+    <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Melden
+  </button>
 
   <!-- flash -->
   <div id="flash" class="hidden px-4 pt-3">
@@ -469,7 +471,7 @@ UI = r"""
   </div>
 
   <!-- ============ HOME ============ -->
-  <div id="view-home" class="flex-1 px-4 pb-10">
+  <div id="view-home" class="max-w-6xl mx-auto px-4 pb-10">
     <div class="dots rounded-2xl -mx-4 px-4 pt-7 pb-5 text-center">
       <img src="__LOGO__" class="w-52 md:w-60 mx-auto" alt="kath.fund">
     </div>
@@ -514,7 +516,7 @@ UI = r"""
   </div>
 
   <!-- ============ SEARCH ============ -->
-  <div id="view-search" class="flex-1 overflow-y-auto px-4 pb-10 hidden">
+  <div id="view-search" class="max-w-6xl mx-auto px-4 pb-10 hidden">
     <button class="btn btn-ghost btn-sm mt-3 -ml-2" onclick="show('home')">
       <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg> Start
     </button>
@@ -532,7 +534,7 @@ UI = r"""
   </div>
 
   <!-- ============ ITEM ============ -->
-  <div id="view-item" class="flex-1 overflow-y-auto px-4 pb-10 hidden">
+  <div id="view-item" class="max-w-3xl mx-auto px-4 pb-24 hidden">
     <button class="btn btn-ghost btn-sm mt-3 -ml-2" onclick="backFromItem()">
       <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg> Zurück
     </button>
@@ -606,7 +608,15 @@ function showFlash(t) { if (!t) return;
   $('#flashText').textContent = t; $('#flash').classList.remove('hidden'); }
 function show(v) { currentView = v;
   ['home','search','item'].forEach(x => $('#view-'+x).classList.toggle('hidden', x !== v));
-  $('#view-'+v).scrollTop = 0; window.scrollTo(0,0); }
+  window.scrollTo(0,0); fitHeight(); }
+function fitHeight() {
+  try {
+    const f = window.frameElement;
+    if (f) f.style.height = Math.max(document.documentElement.scrollHeight, 600) + 'px';
+  } catch (e) {}
+}
+window.addEventListener('load', fitHeight);
+window.addEventListener('resize', fitHeight);
 function openReport(mode) { window.parent.location.search = '?view=report' + (mode === 'camera' ? '&mode=camera' : ''); }
 function submitClaim() {
   const name = $('#claimName').value.trim(), proof = $('#claimProof').value.trim();
@@ -692,6 +702,7 @@ function renderSearch() {
     ? list.map(i => card(i)).join('')
     : `<div class="col-span-full icard border-dashed py-10 text-center text-sm text-[var(--muted)]">
          Keine Treffer — anderen Suchbegriff probieren.</div>`;
+  fitHeight();
 }
 function renderChips() {
   const j = (s) => s.replace(/'/g, "\\'");
@@ -751,6 +762,7 @@ function init() {
     <div class="icard p-2.5"><p class="lbl">Abgeholt</p><p class="text-lg font-extrabold text-[var(--ok)]">${items.filter(i=>i.status==='Abgeholt').length}</p></div>
     <div class="icard p-2.5"><p class="lbl">Gesamt</p><p class="text-lg font-extrabold">${items.length}</p></div>`;
   renderChips();
+  fitHeight();
 }
 init();
 
@@ -769,8 +781,14 @@ UI = (UI
 st.markdown("""
 <style>
   header[data-testid="stHeader"] { display: none !important; }
-  .block-container, [data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
-  [data-testid="stAppViewContainer"] { background: #101014; }
+  [data-testid="stAppViewContainer"] > section.main,
+  section.main { padding: 0 !important; }
+  .block-container, [data-testid="stMainBlockContainer"] {
+    padding: 0 !important; max-width: 100% !important; margin-top: 0 !important;
+  }
+  [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"],
+  section.stMain > div { background: #FAFAF9 !important; }
+  [data-testid="stVerticalBlock"] { gap: 0 !important; }
   section[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
