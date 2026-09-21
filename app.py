@@ -415,8 +415,8 @@ UI = r"""
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   :root {
-    --bg: #FAFAF9; --card: #FFFFFF; --fg: #18181B; --muted: #71717A;
-    --line: #E4E4E7; --line-dash: #D4D4D8; --accent: #DC2626; --accent-fg: #FEF2F2;
+    --bg: #EDECE8; --card: #FFFFFF; --fg: #18181B; --muted: #71717A;
+    --line: #D6D5D1; --line-dash: #C9C8C4; --accent: #DC2626; --accent-fg: #FEF2F2;
     --ok: #16A34A; --info: #2563EB; --warn: #D97706;
   }
   * { -webkit-font-smoothing: antialiased; }
@@ -429,7 +429,7 @@ UI = r"""
   .lbl { font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
          color: var(--muted); }
   h1 { font-weight: 800; letter-spacing: -.03em; }
-  .dots { background-image: radial-gradient(#D4D4D8 1px, transparent 1.2px); background-size: 16px 16px; }
+  .dots { background-image: radial-gradient(#C9C8C4 1px, transparent 1.2px); background-size: 16px 16px; }
   .icard { background: var(--card); border: 1px solid var(--line); border-radius: .9rem; }
   .icard-hover { transition: all .16s ease; }
   .icard-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(24,24,27,.08);
@@ -551,11 +551,11 @@ UI = r"""
       <p class="text-xs text-[var(--muted)] mt-2">Katharineum zu Lübeck</p>
     </div>
     <div class="p-3 space-y-0.5">
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#F4F4F5] text-sm font-medium" onclick="drawer.close();show('home')">
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.close();show('home')">
         <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg> Start</button>
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#F4F4F5] text-sm font-medium" onclick="drawer.close();goSearchAll()">
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.close();goSearchAll()">
         <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg> Alle Fundstücke</button>
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#F4F4F5] text-sm font-medium" onclick="drawer.close();openReport('camera')">
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.close();openReport('camera')">
         <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg> Fund melden</button>
     </div>
     <div class="px-4 pt-2 pb-1 lbl">Kategorien</div>
@@ -629,7 +629,7 @@ function submitClaim() {
 function statusBadge(s) {
   const map = { 'Offen':'bg-[#FEF3C7] text-[#92400E]', 'Beansprucht':'bg-[#DBEAFE] text-[#1E40AF]',
                 'Abgeholt':'bg-[#DCFCE7] text-[#166534]', 'Entsorgt':'bg-[#FEE2E2] text-[#991B1B]' };
-  return `<span class="text-[.62rem] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${map[s]||'bg-[#F4F4F5] text-[var(--muted)]'}">${esc(s)}</span>`;
+  return `<span class="text-[.62rem] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${map[s]||'bg-[#E9E8E4] text-[var(--muted)]'}">${esc(s)}</span>`;
 }
 
 function card(i) {
@@ -730,7 +730,7 @@ function init() {
     const n = items.filter(i=>i.kategorie===cat).length;
     return `<div>
       <div class="icard icard-hover p-3.5 cursor-pointer h-full" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">
-        <div class="w-9 h-9 rounded-lg bg-[#F4F4F5] flex items-center justify-center">${katSvg(cat)}</div>
+        <div class="w-9 h-9 rounded-lg bg-[#E9E8E4] flex items-center justify-center">${katSvg(cat)}</div>
         <b class="block text-[.8rem] leading-tight mt-2 clamp2">${esc(cat)}</b>
         <span class="text-[.66rem] text-[var(--muted)]">${n}</span>
       </div></div>`;
@@ -743,7 +743,7 @@ function init() {
   $('#catList').innerHTML = DATA.categories.map(cat => {
     const n = items.filter(i=>i.kategorie===cat).length;
     return `<div class="icard flex items-center gap-3 px-3.5 py-2.5">
-      <div class="w-8 h-8 rounded-lg bg-[#F4F4F5] flex items-center justify-center">${katSvg(cat)}</div>
+      <div class="w-8 h-8 rounded-lg bg-[#E9E8E4] flex items-center justify-center">${katSvg(cat)}</div>
       <div class="flex-1 min-w-0"><b class="block text-[.82rem] truncate">${esc(cat)}</b>
         <span class="text-[.66rem] text-[var(--muted)]">${n} Fundstück(e)</span></div>
       <button class="btn btn-ghost btn-xs" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">→</button>
@@ -752,7 +752,7 @@ function init() {
 
   const j = (s) => s.replace(/'/g, "\\'");
   $('#drawerCats').innerHTML = DATA.categories.map(c =>
-    `<button class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-[#F4F4F5] text-[.82rem]" onclick="drawer.close();goSearchCat('${j(c)}')">
+    `<button class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-[#E9E8E4] text-[.82rem]" onclick="drawer.close();goSearchCat('${j(c)}')">
       <span class="text-[var(--muted)]">${katSvg(c)}</span><span class="truncate">${esc(c)}</span>
       <span class="ml-auto text-[.66rem] text-[var(--muted)]">${items.filter(i=>i.kategorie===c).length}</span></button>`).join('');
 
@@ -787,7 +787,7 @@ st.markdown("""
     padding: 0 !important; max-width: 100% !important; margin-top: 0 !important;
   }
   [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"],
-  section.stMain > div { background: #FAFAF9 !important; }
+  section.stMain > div { background: #EDECE8 !important; }
   [data-testid="stVerticalBlock"] { gap: 0 !important; }
   section[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none !important; }
 </style>
