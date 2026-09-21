@@ -50,310 +50,14 @@ def file_data_uri(path: Path, max_dim: int = 320) -> str:
 EMBLEM_URI = file_data_uri(EMBLEM_PATH, 200)
 WORDMARK_URI = file_data_uri(WORDMARK_PATH, 700)
 
-st.markdown(f"""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
-
-    :root {{
-        --paper: #F2EEE3;
-        --card: #FFFCF4;
-        --field: #FFFDF7;
-        --ink: #16130E;
-        --ink-2: #3B362C;
-        --ink-soft: #6B6353;
-        --line: #DCD4BF;
-        --red: #B23A2A;
-        --green: #2C6B37;
-        --blue: #2B4C7E;
-        --amber: #94641A;
-        --hard: 3px 3px 0 rgba(22, 19, 14, .16);
-        --rounded-box: .8rem; --rounded-btn: .55rem; --rounded-badge: 2rem;
-    }}
-
-    ::selection {{ background: var(--red); color: #FFF7EE; }}
-    html {{ font-size: 16px; }}
-
-    [data-testid="stAppViewContainer"] {{
-        background-color: var(--paper);
-        background-image: radial-gradient(#E3DAC2 1px, transparent 1.2px);
-        background-size: 22px 22px;
-    }}
-    .block-container, [data-testid="stMainBlockContainer"] {{
-        max-width: 1200px !important;
-        padding: .8rem .9rem 3rem !important;
-    }}
-    @media (min-width: 768px) {{
-        html {{ font-size: 16.5px; }}
-        .block-container, [data-testid="stMainBlockContainer"] {{ padding: 1.2rem 1.8rem 3.5rem !important; }}
-    }}
-    html, body, [class*="css"] {{ font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif; color: var(--ink); }}
-    [data-testid="stVerticalBlock"] {{ gap: .55rem; }}
-    [data-testid="stHorizontalBlock"] {{ gap: .6rem; }}
-
-    /* ================= Streamlit-Chrome weg ================= */
-    #MainMenu, footer,
-    header[data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    [data-testid="stDecoration"],
-    [data-testid="stStatusWidget"],
-    [data-testid="stAppDeployButton"] {{ display: none !important; visibility: hidden !important; }}
-
-    /* ================= Sidebar-Toggle = Schul-Wappen ================= */
-    [data-testid="stSidebarCollapsedControl"] {{
-        background-color: transparent !important;
-        background-image: url('{EMBLEM_URI}') !important;
-        background-size: 44px 44px !important;
-        background-position: center !important;
-        background-repeat: no-repeat !important;
-        border: none !important; border-radius: 50% !important;
-        width: 52px !important; height: 52px !important;
-        top: 10px !important; left: 8px !important;
-        opacity: .92;
-    }}
-    [data-testid="stSidebarCollapsedControl"]:hover {{ opacity: 1; transform: scale(1.06); }}
-    [data-testid="stSidebarCollapsedControl"] svg, [data-testid="stSidebarCollapsedControl"] img,
-    [data-testid="stSidebarCollapsedControl"]::before {{ display: none !important; }}
-    [data-testid="stSidebar"] {{
-        background: var(--card) !important;
-        border-right: 2px solid var(--ink);
-    }}
-    [data-testid="stSidebar"] .block-container {{ padding: 1rem 1rem 2rem !important; }}
-
-    /* ================= Hero ================= */
-    .hero {{ text-align: center; padding: 1.2rem 0 .4rem; }}
-    .hero img.wordmark {{ width: min(320px, 78vw); height: auto; }}
-    .hero .kicker {{
-        font-family: 'IBM Plex Mono', monospace; font-size: .62rem;
-        letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft);
-        margin-top: .8rem;
-    }}
-    .hero .kicker em {{ font-style: normal; color: var(--red); font-weight: 600; }}
-    @media (min-width: 768px) {{ .hero {{ padding: 2.2rem 0 .8rem; }} .hero img.wordmark {{ width: min(420px, 55vw); }} }}
-
-    /* ================= Suchzeile ================= */
-    .searchrow {{ display: flex; gap: 8px; align-items: stretch; }}
-    .st-key-heroq input {{
-        font-size: 1.02rem !important; min-height: 3.15rem;
-        padding-left: .95rem !important; border-radius: 10px !important;
-    }}
-    .st-key-herogo button {{
-        min-height: 3.15rem !important; background: var(--ink) !important; color: var(--paper) !important;
-        border-color: var(--ink) !important; box-shadow: 3px 3px 0 rgba(22,19,14,.4);
-    }}
-
-    /* ================= Melden-Block ================= */
-    .report {{
-        background: var(--card); border: 2px solid var(--ink); border-radius: 14px;
-        box-shadow: var(--hard); padding: 16px 16px 14px; margin-top: 1.1rem; text-align: left;
-    }}
-    @media (min-width: 768px) {{ .report {{ padding: 20px 24px 18px; }} }}
-    .report h3 {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.3rem; margin: 0 0 2px; letter-spacing: -.02em; }}
-    .report p {{ color: var(--ink-soft); font-size: .88rem; margin: 0 0 10px; }}
-    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {{
-        border: 1.5px dashed var(--ink); background: var(--field); border-radius: 10px;
-        min-height: 110px;
-    }}
-    .st-key-reportbtn button {{
-        background: var(--red) !important; border-color: var(--red) !important; color: #FFF6EA !important;
-        box-shadow: 3px 3px 0 rgba(22,19,14,.5);
-    }}
-
-    /* ================= Sektionsköpfe & Scroller ================= */
-    .sec {{ display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 1.4rem 0 8px; }}
-    .sec h2 {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.32rem; letter-spacing: -.02em; margin: 0; }}
-    .sec .tag {{
-        font-family: 'IBM Plex Mono', monospace; font-size: .6rem; letter-spacing: .14em;
-        text-transform: uppercase; color: var(--ink-soft);
-        border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px;
-    }}
-
-    /* ================= daisyUI Karten ================= */
-    .kfund-card {{
-        background: var(--card); border: 1.5px solid var(--ink); border-radius: var(--rounded-box);
-        overflow: hidden; box-shadow: var(--hard); height: 100%; display: flex; flex-direction: column;
-    }}
-    .kfund-card figure {{ margin: 0; }}
-    .kfund-card figure img {{
-        width: 100%; height: 160px; object-fit: cover; display: block;
-        border-bottom: 1.5px solid var(--ink);
-    }}
-    .kfund-card figure.ph-figure {{
-        height: 160px; display: grid; place-items: center;
-        background: repeating-linear-gradient(45deg, #EFE8D2 0 11px, #F8F3E4 11px 22px);
-        border-bottom: 1.5px solid var(--ink);
-        font-family: 'IBM Plex Mono', monospace; font-size: .64rem; letter-spacing: .12em;
-        text-transform: uppercase; color: #9A9078; text-align: center; padding: 0 14px;
-    }}
-    .kfund-card .card-title {{
-        font-family: 'Archivo', sans-serif; font-weight: 800; letter-spacing: -.015em;
-        color: var(--ink); line-height: 1.25; margin-bottom: 2px;
-    }}
-    .kfund-card .card-meta {{
-        font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .07em;
-        text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px;
-    }}
-    .kfund-card .card-badges {{ display: flex; flex-wrap: wrap; gap: 5px; margin-top: auto; }}
-    .kfund-card .card-new {{ margin-left: 2px; transform: none; }}
-    .kfund-card .badge {{ font-family: 'IBM Plex Mono', monospace; letter-spacing: .06em; text-transform: uppercase; font-size: .58rem; border-color: var(--ink); color: var(--ink); }}
-    .kfund-card .badge-warning {{ background: #EFDFAF; }}
-    .kfund-card .badge-info {{ background: #C9D8EC; }}
-    .kfund-card .badge-success {{ background: #CBDCC4; }}
-    .kfund-card .badge-error {{ background: #EBC4BC; color: var(--red); border-color: var(--red); }}
-    .kfund-card .badge-ghost {{ background: var(--field); }}
-    /* scroller keys jetzt pro sektion */
-    .st-key-scroller_new [data-testid="stHorizontalBlock"],
-    .st-key-scroller_new2 [data-testid="stHorizontalBlock"],
-    [class*="st-key-scroller_kat"] [data-testid="stHorizontalBlock"] {{
-        flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden;
-        padding: 4px 2px 12px; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
-    }}
-    .st-key-scroller_new [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
-    [class*="st-key-scroller_kat"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
-        min-width: 218px !important; max-width: 218px; flex: none;
-    }}
-    @media (min-width: 768px) {{
-        .st-key-scroller_new [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
-        [class*="st-key-scroller_kat"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{ min-width: 240px; }}
-    }}
-
-    /* ================= Stempel ================= */
-    .stamp {{
-        display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: .6rem;
-        font-weight: 600; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
-        padding: 3px 9px; border: 1.5px solid currentColor; border-radius: 4px;
-        transform: rotate(-3deg); background: var(--card);
-    }}
-    .s-offen {{ color: var(--amber); }} .s-beansprucht {{ color: var(--blue); }}
-    .s-abgeholt {{ color: var(--green); }} .s-entsorgt {{ color: var(--red); }}
-    .newflag {{
-        display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
-        letter-spacing: .12em; text-transform: uppercase; color: var(--red);
-        border: 1px solid var(--red); border-radius: 3px; padding: 1px 6px; margin-left: 6px;
-    }}
-
-    /* ================= Chips (Filter in der Sidebar) ================= */
-    div[data-testid="stRadio"] [role="radiogroup"] {{ display: flex; flex-wrap: wrap; gap: 6px; }}
-    div[data-testid="stRadio"] [role="radiogroup"] > label {{
-        margin: 0; padding: 6px 12px; border: 1.5px solid var(--line); border-radius: 999px;
-        background: var(--card); cursor: pointer;
-    }}
-    div[data-testid="stRadio"] [role="radiogroup"] > label > span:first-child,
-    div[data-testid="stRadio"] [role="radiogroup"] > label > div > div > div:first-child {{ display: none; }}
-    div[data-testid="stRadio"] [role="radiogroup"] > label p {{
-        font-family: 'IBM Plex Mono', monospace !important; font-size: .68rem !important;
-        font-weight: 600 !important; letter-spacing: .06em !important; text-transform: uppercase;
-        color: var(--ink-soft) !important; margin: 0 !important; line-height: 1.2;
-    }}
-    div[data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) {{
-        background: var(--ink); border-color: var(--ink);
-    }}
-    div[data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) p {{ color: var(--paper) !important; }}
-
-    /* ================= Detailseite ================= */
-    .detail-head {{ display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }}
-    .detail-head h2 {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: clamp(1.4rem, 4vw, 2rem); letter-spacing: -.02em; margin: 0; }}
-    .dgrid {{ display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0; }}
-    .dgrid dt {{ font-family: 'IBM Plex Mono', monospace; font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); padding-top: 3px; }}
-    .dgrid dd {{ font-size: .95rem; font-weight: 600; margin: 0; }}
-    .panel {{
-        background: var(--card); border: 1.5px solid var(--ink); border-radius: 12px;
-        box-shadow: var(--hard); padding: 16px 18px; margin-bottom: 12px;
-    }}
-
-    /* ================= Formulare & Buttons ================= */
-    .stButton > button, .stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
-        font-family: 'IBM Plex Mono', monospace !important; text-transform: uppercase !important;
-        letter-spacing: .1em !important; font-size: .7rem !important; font-weight: 600 !important;
-        background: var(--card) !important; color: var(--ink) !important;
-        border: 1.5px solid var(--ink) !important; border-radius: 8px !important;
-        box-shadow: 3px 3px 0 var(--ink); padding: .6rem 1.05rem !important;
-    }}
-    .stButton > button:hover {{ transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }}
-    .stButton > button:active {{ transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }}
-    [data-testid="stFormSubmitButton"] > button {{
-        background: var(--red) !important; border-color: var(--red) !important; color: #FFF6EA !important;
-    }}
-    .st-key-back button {{ box-shadow: none !important; border-color: var(--line) !important; }}
-
-    div[data-testid="stTextInput"] input, div[data-testid="stTextArea"] textarea,
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
-        background: var(--field) !important; border: 1.5px solid var(--line) !important;
-        border-radius: 8px !important; font-size: .92rem !important; color: var(--ink) !important;
-        min-height: 2.65rem;
-    }}
-    div[data-testid="stTextInput"] input:focus, div[data-testid="stTextArea"] textarea:focus {{
-        border-color: var(--ink) !important; box-shadow: 2px 2px 0 var(--ink) !important;
-    }}
-
-    /* ================= Sidebar-Optik ================= */
-    [data-testid="stSidebar"] .stMarkdown h4, .sblbl {{
-        font-family: 'IBM Plex Mono', monospace !important; font-size: .62rem !important;
-        letter-spacing: .14em !important; text-transform: uppercase !important;
-        color: var(--ink-soft) !important; margin: .8rem 0 .3rem !important;
-    }}
-    [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] {{ flex-direction: column; align-items: stretch; }}
-    [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label {{ border-radius: 8px; }}
-
-    .sec-note {{ font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--ink-soft); margin-bottom: 10px; }}
-    .sec-note b {{ color: var(--ink); }}
-    .empty {{
-        border: 1.5px dashed var(--line); border-radius: 12px; background: var(--field);
-        text-align: center; padding: 26px 16px; font-family: 'IBM Plex Mono', monospace;
-        font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: #9A9078;
-    }}
-    .note {{ border-left: 3px solid var(--ink); background: #F5EFDC; padding: 9px 13px; border-radius: 0 8px 8px 0; font-size: .86rem; margin: 8px 0; }}
-    .note span {{ display: block; color: var(--ink-soft); font-size: .78rem; margin-top: 2px; }}
-    .verdict {{
-        display: flex; gap: 14px; align-items: center; background: var(--card);
-        border: 1.5px solid var(--ink); border-radius: 11px; padding: 12px 15px; margin-top: 10px; box-shadow: var(--hard);
-    }}
-    .verdict-stamp {{
-        font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; font-size: .62rem;
-        letter-spacing: .12em; color: var(--red); border: 2px solid var(--red); border-radius: 6px;
-        padding: 7px 11px; transform: rotate(-4deg); white-space: nowrap; font-weight: 600;
-    }}
-    .verdict-cat {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.1rem; letter-spacing: -.015em; }}
-    .verdict-meta {{ font-family: 'IBM Plex Mono', monospace; font-size: .66rem; color: var(--ink-soft); margin-top: 2px; }}
-    .ai-warn {{ border-left: 3px solid var(--amber); background: #F5EFDC; padding: 8px 12px; font-size: .78rem; color: var(--ink-2); margin-top: 8px; border-radius: 0 6px 6px 0; }}
-    .stMarkdown p {{ font-size: .93rem; }}
-    [data-testid="stCaptionContainer"] {{ font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: var(--ink-soft); }}
-    [data-testid="stAlert"] {{ border: 1.5px solid var(--ink); border-radius: 9px; background: var(--card); box-shadow: var(--hard); }}
-    details[data-testid="stExpander"] {{ border: 1.5px solid var(--ink); border-radius: 9px; background: var(--card); }}
-    details[data-testid="stExpander"] summary {{ font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }}
-    div[data-testid="stSpinner"] p {{ font-family: 'IBM Plex Mono', monospace; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; }}
-
-    /* ================= daisyUI-Komponenten (eigener Layer, kein Tailwind-Reset) ================= */
-    .card {{
-        position: relative; display: flex; flex-direction: column; border-radius: var(--rounded-box);
-    }}
-    .card figure {{ margin: 0; }}
-    .card-body {{ padding: 1rem; display: flex; flex-direction: column; flex: 1; }}
-    .card-title {{ display: flex; align-items: center; gap: .4rem; font-weight: 700; margin: 0; }}
-    .card-title.text-base {{ font-size: 1.02rem; line-height: 1.3; }}
-
-    .badge {{
-        display: inline-flex; align-items: center; justify-content: center;
-        height: 1.45rem; padding: 0 .55rem; border-radius: var(--rounded-badge);
-        border: 1px solid var(--ink); font-size: .62rem; font-weight: 600;
-        white-space: nowrap; text-transform: uppercase; letter-spacing: .06em;
-        font-family: 'IBM Plex Mono', monospace;
-    }}
-    .badge-sm {{ height: 1.2rem; padding: 0 .45rem; font-size: .56rem; }}
-    .badge-ghost {{ background: var(--field); color: var(--ink-2); border-color: var(--line); }}
-    .badge-outline {{ background: transparent; }}
-    .badge-warning {{ background: #EFDFAF; color: var(--ink); }}
-    .badge-info {{ background: #C9D8EC; color: var(--ink); }}
-    .badge-success {{ background: #CBDCC4; color: var(--ink); }}
-    .badge-error {{ background: #EBC4BC; color: var(--red); border-color: var(--red); }}
-    .badge-error.badge-outline {{ background: var(--card); color: var(--red); }}
-    .card-new {{ margin-left: 2px; }}
-
-    /* daisyUI-btn akzente fuer our buttons */
-    .btn {{ cursor: pointer; text-align: center; }}
-
-    div[data-testid="stImage"] img {{{{ border-radius: 10px; border: 1.5px solid var(--ink); }}}}
-</style>
-""", unsafe_allow_html=True)
+CSS_PATH = Path("assets/style.css")
+_css = CSS_PATH.read_text(encoding="utf-8") if CSS_PATH.exists() else ""
+_css += f"""
+[data-testid='stSidebarCollapsedControl'] {{
+    background-image: url('{EMBLEM_URI}') !important;
+}}
+"""
+st.markdown(f"<style>{_css}</style>", unsafe_allow_html=True)
 
 # =============================================================================
 # 2. DATA PERSISTENCE
@@ -696,32 +400,48 @@ STATUS_BADGE = {
 }
 
 
+KAT_ICON = {
+    "Kleidung & Textilien": "🧥",
+    "Trinkflaschen & Brotdosen": "🥤",
+    "Rucksäcke & Taschen": "🎒",
+    "Elektronik & Kabel": "🎧",
+    "Schlüssel & Wertsachen": "🔑",
+    "Schulmaterial & Bücher": "📚",
+    "Sportbekleidung": "👟",
+    "Sonstiges": "📦",
+}
+
+STATUS_BADGE_CLASS = {"Offen": "b-warn", "Beansprucht": "b-info",
+                      "Abgeholt": "b-ok", "Entsorgt": "b-err"}
+
+
 def badge_html(item: dict, extra: str = "") -> str:
     status = item.get("status", "Offen")
-    bcls = STATUS_BADGE.get(status, "badge-ghost")
-    neu = '<span class="badge badge-error badge-outline badge-sm">Neu</span>' if is_new(item) else ""
-    return (f'<span class="badge {bcls} badge-sm">{html.escape(status)}</span>'
-            f'<span class="badge badge-ghost badge-sm">{html.escape(item.get("kategorie", ""))}</span>' + extra)
+    bcls = STATUS_BADGE_CLASS.get(status, "")
+    out = f'<span class="badge {bcls}">{html.escape(status)}</span>'
+    if is_new(item):
+        out += '<span class="badge b-new">Neu</span>'
+    return out + extra
 
 
 def card_html(item: dict) -> str:
-    """daisyUI card: Bild oben, Titel, Meta, Status-Badge."""
+    """Fundkarte: Bild oder Kategorie-Icon, Titel, Meta, Status-Badges."""
     titel = html.escape(str(item.get("titel", "")))
-    meta = html.escape(f"{item.get('fundort')} · {item.get('datum_fund')}")
+    meta = html.escape(f"📍 {item.get('fundort')} · {item.get('datum_fund')}")
+    kat = html.escape(item.get("kategorie", ""))
     loaded = load_item_image(item.get("image_file"))
     if loaded is not None:
         figure = f'<figure><img src="{image_to_data_uri(loaded, 420)}" alt="{titel}"></figure>'
     else:
-        figure = f'<figure class="ph-figure"><span>{html.escape(item.get("kategorie", ""))}</span></figure>'
-    badges = badge_html(item)
-    neu = '<span class="badge badge-error badge-sm card-new">Neu</span>' if is_new(item) else ""
+        icon = KAT_ICON.get(item.get("kategorie", ""), "📦")
+        figure = f'<figure class="ph"><span>{icon}</span><small>{kat}</small></figure>'
     return f"""
-    <div class="card kfund-card">
+    <div class="fund-card">
         {figure}
-        <div class="card-body p-4">
-            <h3 class="card-title text-base">{titel} {neu}</h3>
-            <p class="card-meta">{meta}</p>
-            <div class="card-badges">{badges}</div>
+        <div class="fc-body">
+            <div class="fc-title">{titel}</div>
+            <div class="fc-meta">{meta}</div>
+            <div class="fc-badges">{badge_html(item)}</div>
         </div>
     </div>
     """
@@ -731,18 +451,16 @@ def scroller(items: list, key_prefix: str):
     """Karten in horizontal scrollbarer Zeile; Klick öffnet die Detailseite."""
     if not items:
         return
-    with st.container(key=f"scroller_{key_prefix}"):
-        cols = st.columns(len(items), gap="small")
-        for col, item in zip(cols, items):
-            with col:
-                st.markdown(card_html(item), unsafe_allow_html=True)
-                st.button("Ansehen", key=f"{key_prefix}_{item['id']}",
-                          on_click=open_item, args=(item["id"],), width="stretch")
+    html_cards = "".join(f'<div class="sc-cell">{card_html(i)}</div>' for i in items)
+    st.markdown(f'<div class="scroller">{html_cards}</div>', unsafe_allow_html=True)
+    for idx, item in enumerate(items):
+        st.button("Ansehen", key=f"{key_prefix}_{item['id']}",
+                  on_click=open_item, args=(item["id"],))
 
 
-def section_head(title: str, tag: str = ""):
-    tag_html = f'<span class="tag">{html.escape(tag)}</span>' if tag else ""
-    st.markdown(f'<div class="sec"><h2>{html.escape(title)}</h2>{tag_html}</div>',
+def section_head(title: str, count=None):
+    c = f'<span class="count">{count}</span>' if count else ""
+    st.markdown(f'<div class="sec"><h2>{html.escape(title)}</h2>{c}</div>',
                 unsafe_allow_html=True)
 
 
@@ -829,49 +547,44 @@ with st.sidebar:
 def view_home():
     st.markdown(f"""
     <div class="hero">
-        <img class="wordmark" src="{WORDMARK_URI}" alt="kath.fund">
-        <div class="kicker">Katharineum zu Lübeck · <em>Amtliches Fundverzeichnis</em></div>
+        <img src="{WORDMARK_URI}" alt="kath.fund">
+        <div class="kicker">Katharineum zu Lübeck · <b>Amtliches Fundverzeichnis</b></div>
     </div>
     """, unsafe_allow_html=True)
 
     c_q, c_go = st.columns([3.4, 1])
     with c_q:
         with st.container(key="heroq"):
-            query = st.text_input("Suche", placeholder="Jacke, AirPods, Schlüsselbund, #1002 …",
+            query = st.text_input("Suche", placeholder="🔍 Jacke, AirPods, Schlüsselbund, #1002 …",
                                   label_visibility="collapsed", key="q_home")
     with c_go:
         with st.container(key="herogo"):
-            search_clicked = st.button("Suchen", width="stretch", key="go_home",
-                                       on_click=go, args=("search",))
-    if search_clicked and (query or "").strip():
-        st.session_state["q_search"] = query.strip()
-    if st.session_state.get("q_search") is None:
-        st.session_state.setdefault("q_search", "")
+            st.button("Suchen", width="stretch", key="go_home", type="primary",
+                      on_click=go, args=("search",))
 
-    # --- Fund melden ---
-    st.markdown("""
-    <div class="report">
-        <h3>Etwas gefunden?</h3>
-        <p>Foto machen oder hochladen — die Kategorie wird automatisch vorgeschlagen.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    uploaded = st.file_uploader("Foto des Fundstücks", type=["jpg", "jpeg", "png", "webp"],
-                                key="home_upload", label_visibility="collapsed")
-    bcol = st.columns(2)
-    with bcol[0]:
-        st.button("📷 Fund jetzt melden", key="reportbtn", width="stretch",
-                  on_click=go, args=("erfassen",))
-    if uploaded is not None:
-        st.session_state["pending_photo"] = uploaded.getvalue()
-        st.toast("Foto übernommen — Details ergänzen", icon="📷")
-        if st.button("Weiter mit diesem Foto →", key="reportbtn2", width="stretch",
-                     on_click=go, args=("erfassen",)):
-            pass
+    # --- Fund melden: kompakter CTA-Banner ---
+    up1, up2 = st.columns([2.2, 1])
+    with up1:
+        st.markdown("""
+        <div class="report-cta">
+            <div><div class="t">Etwas gefunden? 📷</div>
+            <div class="s">Foto hochladen, Kategorie wird automatisch vorgeschlagen.</div></div>
+        </div>
+        """, unsafe_allow_html=True)
+        uploaded = st.file_uploader("Foto des Fundstücks", type=["jpg", "jpeg", "png", "webp"],
+                                    key="home_upload", label_visibility="collapsed")
+    with up2:
+        st.write("")
+        if st.button("＋ Fund jetzt melden", key="reportbtn", width="stretch", type="primary"):
+            if uploaded is not None:
+                st.session_state["pending_photo"] = uploaded.getvalue()
+            go("erfassen")
+            st.rerun()
 
     # --- Neu ---
     neue = sorted([i for i in items_all if i.get("status") in ("Offen", "Beansprucht")],
                   key=lambda i: str(i.get("datum_fund", "")), reverse=True)[:8]
-    section_head("Neu im Fundbüro", "letzte Tage")
+    section_head("Neu im Fundbüro", f"{len(neue)} Stück(e)")
     if neue:
         scroller(neue, "new")
     else:
@@ -943,12 +656,9 @@ def view_item():
 
     st.button("← Zurück", key="back_item", on_click=go, args=("search",))
     titel = html.escape(str(item.get("titel", "")))
-    neu = '<span class="newflag">Neu</span>' if is_new(item) else ""
 
     st.markdown(f"""
-    <div class="detail-head"><h2>{titel}</h2>{neu}
-        <span class="stamp s-{str(item.get('status', 'Offen')).lower()}">{item.get('status', 'Offen')}</span>
-    </div>
+    <div class="detail-head"><h2>{titel}</h2>{badge_html(item)}</div>
     """, unsafe_allow_html=True)
 
     img_col, info_col = st.columns([1, 1], gap="large")
@@ -959,13 +669,14 @@ def view_item():
             preview.thumbnail((900, 900), Image.Resampling.LANCZOS)
             st.image(preview, width="stretch")
         else:
-            st.markdown(f'<div class="kfund-card"><figure class="ph-figure" style="height:240px;">'
-                        f'<span>{html.escape(item.get("kategorie", ""))}</span></figure></div>',
+            icon = KAT_ICON.get(item.get("kategorie", ""), "📦")
+            st.markdown(f'<div class="fund-card"><figure class="ph" style="height:240px;font-size:3rem;">'
+                        f'<span>{icon}</span></figure></div>', unsafe_allow_html=True)
+        tags = "".join(f'<span class="badge">{html.escape(str(t))}</span> '
+                       for t in item.get("tags", []))
+        if tags:
+            st.markdown(f'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">{tags}</div>',
                         unsafe_allow_html=True)
-        chips = "".join(f'<span class="chip">{html.escape(str(t))}</span>'
-                        for t in item.get("tags", []))
-        if chips:
-            st.markdown(f'<div style="margin-top:8px;">{chips}</div>', unsafe_allow_html=True)
 
     with info_col:
         st.markdown(f"""
@@ -1031,10 +742,10 @@ def view_erfassen():
 
             st.markdown(f"""
             <div class="verdict">
-                <div class="verdict-stamp">Vorschlag</div>
+                <div class="v-stamp">Vorschlag</div>
                 <div>
-                    <div class="verdict-cat">{html.escape(ai_category)}</div>
-                    <div class="verdict-meta">Sicherheit {ai_confidence * 100:.0f} % · {html.escape(ai_engine)}</div>
+                    <div class="v-cat">{html.escape(ai_category)}</div>
+                    <div class="v-meta">Sicherheit {ai_confidence * 100:.0f} % · {html.escape(ai_engine)}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1182,13 +893,13 @@ def view_admin():
         for c in claims:
             rel = next((i for i in items_all if i["id"] == c["item_id"]), None)
             titel = rel["titel"] if rel else "Gelöschtes Fundstück"
-            status_slug = "abgeholt" if c["status"] == "Genehmigt" else ("entsorgt" if c["status"] == "Abgelehnt" else "beansprucht")
+            badge_cls = {"Genehmigt": "b-ok", "Abgelehnt": "b-err", "In Prüfung": "b-info"}.get(c["status"], "")
             with st.expander(f"Anspruch #{c['claim_id']} · Beleg #{c['item_id']} · {titel}"):
                 st.markdown(f"""
                 <div class="note"><b>{html.escape(str(c['name']))}</b>
                 <span>Eingereicht am {c['datum']} · Status {c['status']}</span></div>
                 <div style="margin:6px 0 10px;">{html.escape(str(c['proof']))}</div>
-                <div style="margin-bottom:10px;"><span class="stamp s-{status_slug}">{c['status']}</span></div>
+                <div style="margin-bottom:10px;"><span class="badge {badge_cls}">{c['status']}</span></div>
                 """, unsafe_allow_html=True)
                 b1, b2 = st.columns(2)
                 with b1:

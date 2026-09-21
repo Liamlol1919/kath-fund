@@ -1,0 +1,207 @@
+/* ==========================================================================
+   kath.fund — Design System (schlank, kontrastreich, kein Framework-Krieg)
+   Wird per <style> geladen; nur eigene Klassen + wenige Streamlit-Pins.
+   ========================================================================== */
+
+:root {
+  --bg: #F7F5F0;
+  --surface: #FFFFFF;
+  --ink: #1A1713;
+  --ink-2: #44403A;
+  --ink-soft: #6E6862;
+  --line: #E4E0D8;
+  --accent: #B23A2A;
+  --accent-ink: #FFF6EA;
+  --ok: #2C6B37;
+  --warn-bg: #FBF0D3;
+  --info-bg: #DEE8F4;
+  --ok-bg: #DFEBDA;
+  --err-bg: #F6DEDA;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(26,23,19,.06), 0 4px 14px rgba(26,23,19,.06);
+}
+
+/* ---------- Global ---------- */
+.stApp { background: var(--bg) !important; }
+h1, h2, h3, h4 { color: var(--ink); }
+a { color: var(--accent); }
+
+.block-container, [data-testid="stMainBlockContainer"] {
+  max-width: 1180px !important;
+  padding: 1rem 1.1rem 3rem !important;
+}
+@media (min-width: 768px) {
+  .block-container, [data-testid="stMainBlockContainer"] { padding: 1.4rem 2rem 3.5rem !important; }
+}
+
+/* Streamlit-Chrome */
+#MainMenu, footer, [data-testid="stStatusWidget"],
+[data-testid="stDecoration"], [data-testid="stAppDeployButton"] {
+  display: none !important;
+}
+
+/* ---------- Sidebar: hell & lesbar ---------- */
+[data-testid="stSidebar"] {
+  background: var(--surface) !important;
+  border-right: 1px solid var(--line) !important;
+}
+[data-testid="stSidebar"] * { color: var(--ink); }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+  color: var(--ink-soft);
+  font-size: .8rem;
+}
+
+/* ---------- Sidebar-Toggle: Wappen ---------- */
+[data-testid="stSidebarCollapsedControl"] {
+  background-color: transparent !important;
+  background-size: 40px 40px !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  border: none !important; border-radius: 50% !important;
+  width: 48px !important; height: 48px !important;
+  top: 8px !important; left: 6px !important;
+  opacity: .9;
+}
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="stSidebarCollapsedControl"]::before { display: none !important; }
+
+/* ---------- Header ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 6px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px;
+}
+.topbar img.logo { height: 44px; width: auto; }
+.topbar .brand { font-weight: 800; font-size: 1.15rem; letter-spacing: -.01em; color: var(--ink); }
+.topbar .brand span { color: var(--ink-soft); font-weight: 500; }
+
+/* ---------- Hero (nur Start) ---------- */
+.hero { text-align: center; padding: 1.6rem 0 .6rem; }
+.hero img { width: min(260px, 60vw); height: auto; }
+.hero .kicker {
+  font-size: .8rem; color: var(--ink-soft); margin-top: .5rem;
+}
+.hero .kicker b { color: var(--accent); font-weight: 600; }
+@media (min-width: 768px) { .hero { padding: 2rem 0 .8rem; } .hero img { width: min(320px, 45vw); } }
+
+/* ---------- Cards ---------- */
+.fund-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden; height: 100%;
+  display: flex; flex-direction: column;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.fund-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(26,23,19,.1); }
+.fund-card figure { margin: 0; }
+.fund-card figure img {
+  width: 100%; height: 150px; object-fit: cover; display: block;
+}
+.fund-card figure.ph {
+  height: 150px; display: flex; align-items: center; justify-content: center; flex-direction: column;
+  gap: 4px; font-size: 2.2rem; background: var(--bg);
+}
+.fund-card figure.ph small { font-size: .68rem; color: var(--ink-soft); letter-spacing: .04em; }
+.fund-card .fc-body { padding: 12px 14px 13px; display: flex; flex-direction: column; flex: 1; gap: 6px; }
+.fund-card .fc-title {
+  font-weight: 700; font-size: .98rem; color: var(--ink); line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.fund-card .fc-meta { font-size: .78rem; color: var(--ink-soft); }
+.fund-card .fc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; }
+
+/* ---------- Badges ---------- */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: .68rem; font-weight: 600; letter-spacing: .02em;
+  background: var(--bg); color: var(--ink-2); border: 1px solid var(--line);
+}
+.badge.b-warn { background: var(--warn-bg); border-color: transparent; color: #7A5A10; }
+.badge.b-info { background: var(--info-bg); border-color: transparent; color: #2B4C7E; }
+.badge.b-ok   { background: var(--ok-bg); border-color: transparent; color: var(--ok); }
+.badge.b-err  { background: var(--err-bg); border-color: transparent; color: var(--accent); }
+.badge.b-new  { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
+
+/* ---------- Scroller (horizontal) ---------- */
+.scroller { display: flex; gap: 14px; overflow-x: auto; padding: 6px 2px 14px; scroll-snap-type: x proximity; }
+.scroller > * { flex: 0 0 230px; max-width: 230px; scroll-snap-align: start; }
+
+/* ---------- Panels / Sektionen ---------- */
+.sec { display: flex; align-items: baseline; gap: 10px; margin: 1.3rem 0 10px; }
+.sec h2 { font-size: 1.25rem; font-weight: 800; margin: 0; letter-spacing: -.01em; color: var(--ink); }
+.sec .count { font-size: .78rem; color: var(--ink-soft); }
+
+.panel {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 16px 18px; margin-bottom: 12px;
+}
+.empty {
+  border: 1px dashed var(--line); border-radius: var(--radius);
+  text-align: center; padding: 26px 16px; color: var(--ink-soft); font-size: .85rem;
+  background: var(--surface);
+}
+
+/* ---------- Detailseite ---------- */
+.detail-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.detail-head h2 { font-size: clamp(1.3rem, 4vw, 1.9rem); font-weight: 800; margin: 0; color: var(--ink); }
+.dgrid { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; margin: 10px 0; }
+.dgrid dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); padding-top: 3px; }
+.dgrid dd { font-size: .93rem; font-weight: 600; margin: 0; color: var(--ink); }
+
+/* ---------- Upload / Melden ---------- */
+.report-cta {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 16px; margin-top: 1rem;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.report-cta .t { font-weight: 700; color: var(--ink); }
+.report-cta .s { font-size: .8rem; color: var(--ink-soft); }
+
+div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {
+  border: 1.5px dashed var(--line); background: var(--bg); border-radius: var(--radius);
+  min-height: 100px;
+}
+
+/* ---------- Formulare ---------- */
+div[data-testid="stTextInput"] input, div[data-testid="stTextArea"] textarea,
+div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+  background: var(--surface) !important; border: 1px solid var(--line) !important;
+  border-radius: 8px !important; color: var(--ink) !important; min-height: 2.6rem;
+}
+div[data-testid="stTextInput"] input:focus, div[data-testid="stTextArea"] textarea:focus {
+  border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(178,58,42,.12) !important;
+}
+.st-key-heroq input { font-size: 1rem !important; min-height: 3rem; }
+
+/* verdict (KI-Vorschlag) */
+.verdict {
+  display: flex; gap: 14px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 15px; margin-top: 10px; box-shadow: var(--shadow);
+}
+.verdict .v-stamp {
+  font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent); background: var(--err-bg); border-radius: 6px; padding: 6px 10px; white-space: nowrap;
+}
+.verdict .v-cat { font-weight: 700; font-size: 1.05rem; color: var(--ink); }
+.verdict .v-meta { font-size: .72rem; color: var(--ink-soft); margin-top: 2px; }
+.ai-warn {
+  border-left: 3px solid #D9A520; background: var(--warn-bg);
+  padding: 8px 12px; font-size: .8rem; color: #6B520E; margin-top: 8px; border-radius: 0 8px 8px 0;
+}
+
+/* Streamlit-Widgets leicht angehoben, nicht umgebaut */
+[data-testid="stAlert"] { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+details[data-testid="stExpander"] { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+[data-testid="stImage"] img { border-radius: var(--radius); border: 1px solid var(--line); }
+
+/* nachgereichte klassen */
+.sec-note { font-size: .78rem; color: var(--ink-soft); margin: 4px 0 10px; }
+.sec-note b { color: var(--ink); }
+.note { border-left: 3px solid var(--ink); background: var(--bg); padding: 9px 13px; border-radius: 0 8px 8px 0; font-size: .86rem; margin: 8px 0; }
+.note span { display: block; color: var(--ink-soft); font-size: .78rem; margin-top: 2px; }
+.scroller { display: flex; gap: 14px; overflow-x: auto; padding: 6px 2px 14px; }
+.scroller > * { flex: 0 0 230px; max-width: 230px; }
