@@ -27,7 +27,7 @@ st.set_page_config(
     page_title="kath.fund — Fundbüro",
     page_icon="🎒",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 EMBLEM_PATH = Path("assets/emblem.png")
@@ -53,6 +53,21 @@ WORDMARK_URI = file_data_uri(WORDMARK_PATH, 700)
 st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+    @import url('https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css');
+
+    [data-theme="kfund"], :root {{
+        --rounded-box: .75rem; --rounded-btn: .5rem; --rounded-badge: 1.9rem;
+        --p: 30% 0.05 60; --pc: 96% 0.02 60;
+        --s: 43% 0.16 25; --sc: 96% 0.03 25;
+        --a: 45% 0.09 150; --ac: 96% 0.02 150;
+        --n: 25% 0.02 70; --nc: 94% 0.01 70;
+        --b1: 98% 0.01 90; --b2: 95% 0.015 85; --b3: 91% 0.02 80;
+        --bc: 22% 0.03 70; --in: 65% 0.13 230; --inc: 0% 0 0;
+        --su: 55% 0.14 155; --suc: 0% 0 0; --wa: 70% 0.14 80; --wac: 0% 0 0;
+        --er: 50% 0.18 25; --erc: 0% 0 0;
+    }}
+    body {{ color: hsl(var(--bc)) !important; }}
 
     :root {{
         --paper: #F2EEE3;
@@ -166,35 +181,54 @@ st.markdown(f"""
         border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px;
     }}
 
-    /* horizontaler Sidescroller: Spalten werden nicht umgebrochen */
-    .st-key-scroller [data-testid="stHorizontalBlock"] {{
+    /* ================= daisyUI Karten ================= */
+    .kfund-card {{
+        background: var(--card); border: 1.5px solid var(--ink); border-radius: var(--rounded-box);
+        overflow: hidden; box-shadow: var(--hard); height: 100%; display: flex; flex-direction: column;
+    }}
+    .kfund-card figure {{ margin: 0; }}
+    .kfund-card figure img {{
+        width: 100%; height: 160px; object-fit: cover; display: block;
+        border-bottom: 1.5px solid var(--ink);
+    }}
+    .kfund-card figure.ph-figure {{
+        height: 160px; display: grid; place-items: center;
+        background: repeating-linear-gradient(45deg, #EFE8D2 0 11px, #F8F3E4 11px 22px);
+        border-bottom: 1.5px solid var(--ink);
+        font-family: 'IBM Plex Mono', monospace; font-size: .64rem; letter-spacing: .12em;
+        text-transform: uppercase; color: #9A9078; text-align: center; padding: 0 14px;
+    }}
+    .kfund-card .card-title {{
+        font-family: 'Archivo', sans-serif; font-weight: 800; letter-spacing: -.015em;
+        color: var(--ink); line-height: 1.25; margin-bottom: 2px;
+    }}
+    .kfund-card .card-meta {{
+        font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .07em;
+        text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px;
+    }}
+    .kfund-card .card-badges {{ display: flex; flex-wrap: wrap; gap: 5px; margin-top: auto; }}
+    .kfund-card .card-new {{ margin-left: 2px; transform: none; }}
+    .kfund-card .badge {{ font-family: 'IBM Plex Mono', monospace; letter-spacing: .06em; text-transform: uppercase; font-size: .58rem; border-color: var(--ink); color: var(--ink); }}
+    .kfund-card .badge-warning {{ background: #EFDFAF; }}
+    .kfund-card .badge-info {{ background: #C9D8EC; }}
+    .kfund-card .badge-success {{ background: #CBDCC4; }}
+    .kfund-card .badge-error {{ background: #EBC4BC; color: var(--red); border-color: var(--red); }}
+    .kfund-card .badge-ghost {{ background: var(--field); }}
+    /* scroller keys jetzt pro sektion */
+    .st-key-scroller_new [data-testid="stHorizontalBlock"],
+    .st-key-scroller_new2 [data-testid="stHorizontalBlock"],
+    [class*="st-key-scroller_kat"] [data-testid="stHorizontalBlock"] {{
         flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden;
         padding: 4px 2px 12px; scrollbar-width: thin; -webkit-overflow-scrolling: touch;
     }}
-    .st-key-scroller [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+    .st-key-scroller_new [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [class*="st-key-scroller_kat"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
         min-width: 218px !important; max-width: 218px; flex: none;
     }}
     @media (min-width: 768px) {{
-        .st-key-scroller [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{ min-width: 240px; }}
+        .st-key-scroller_new [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+        [class*="st-key-scroller_kat"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{ min-width: 240px; }}
     }}
-
-    /* ================= Karte ================= */
-    .ticket {{
-        background: var(--card); border: 1.5px solid var(--ink); border-radius: 11px;
-        overflow: hidden; box-shadow: var(--hard); display: flex; flex-direction: column; height: 100%;
-        cursor: pointer;
-    }}
-    .ticket-photo {{ position: relative; }}
-    .ticket-photo img {{ display: block; width: 100%; height: 150px; object-fit: cover; border-bottom: 1.5px solid var(--ink); }}
-    .ticket-photo.ph {{
-        height: 150px; display: grid; place-items: center; border-bottom: 1.5px solid var(--ink);
-        background: repeating-linear-gradient(45deg, #EFE8D2 0 11px, #F8F3E4 11px 22px);
-        font-family: 'IBM Plex Mono', monospace; font-size: .66rem; letter-spacing: .12em;
-        text-transform: uppercase; color: #9A9078; text-align: center; padding: 0 14px;
-    }}
-    .ticket-body {{ padding: 10px 12px 11px; display: flex; flex-direction: column; flex: 1; }}
-    .ticket-title {{ font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.02rem; line-height: 1.25; letter-spacing: -.015em; margin-bottom: 5px; }}
-    .ticket-meta {{ font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft); }}
 
     /* ================= Stempel ================= */
     .stamp {{
@@ -638,23 +672,40 @@ def is_new(item) -> bool:
     return str(item.get("datum_fund", "")) >= neu_grenze
 
 
-def card_html(item: dict) -> str:
+STATUS_BADGE = {
+    "Offen": "badge-warning",
+    "Beansprucht": "badge-info",
+    "Abgeholt": "badge-success",
+    "Entsorgt": "badge-error",
+}
+
+
+def badge_html(item: dict, extra: str = "") -> str:
     status = item.get("status", "Offen")
+    bcls = STATUS_BADGE.get(status, "badge-ghost")
+    neu = '<span class="badge badge-error badge-outline badge-sm">Neu</span>' if is_new(item) else ""
+    return (f'<span class="badge {bcls} badge-sm">{html.escape(status)}</span>'
+            f'<span class="badge badge-ghost badge-sm">{html.escape(item.get("kategorie", ""))}</span>' + extra)
+
+
+def card_html(item: dict) -> str:
+    """daisyUI card: Bild oben, Titel, Meta, Status-Badge."""
     titel = html.escape(str(item.get("titel", "")))
-    kategorie = html.escape(str(item.get("kategorie", "")))
     meta = html.escape(f"{item.get('fundort')} · {item.get('datum_fund')}")
     loaded = load_item_image(item.get("image_file"))
     if loaded is not None:
-        photo = f'<div class="ticket-photo"><img src="{image_to_data_uri(loaded, 420)}" alt="{titel}"></div>'
+        figure = f'<figure><img src="{image_to_data_uri(loaded, 420)}" alt="{titel}"></figure>'
     else:
-        photo = f'<div class="ticket-photo ph">{kategorie}</div>'
-    neu = '<span class="newflag">Neu</span>' if is_new(item) else ""
+        figure = f'<figure class="ph-figure"><span>{html.escape(item.get("kategorie", ""))}</span></figure>'
+    badges = badge_html(item)
+    neu = '<span class="badge badge-error badge-sm card-new">Neu</span>' if is_new(item) else ""
     return f"""
-    <div class="ticket">
-        {photo}
-        <div class="ticket-body">
-            <div class="ticket-title">{titel}{neu}</div>
-            <div class="ticket-meta">{meta}</div>
+    <div class="card kfund-card">
+        {figure}
+        <div class="card-body p-4">
+            <h3 class="card-title text-base">{titel} {neu}</h3>
+            <p class="card-meta">{meta}</p>
+            <div class="card-badges">{badges}</div>
         </div>
     </div>
     """
@@ -664,7 +715,7 @@ def scroller(items: list, key_prefix: str):
     """Karten in horizontal scrollbarer Zeile; Klick öffnet die Detailseite."""
     if not items:
         return
-    with st.container(key="scroller"):
+    with st.container(key=f"scroller_{key_prefix}"):
         cols = st.columns(len(items), gap="small")
         for col, item in zip(cols, items):
             with col:
@@ -892,8 +943,9 @@ def view_item():
             preview.thumbnail((900, 900), Image.Resampling.LANCZOS)
             st.image(preview, width="stretch")
         else:
-            st.markdown(f'<div class="ticket-photo ph" style="height:240px;">'
-                        f'{html.escape(item.get("kategorie", ""))}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="kfund-card"><figure class="ph-figure" style="height:240px;">'
+                        f'<span>{html.escape(item.get("kategorie", ""))}</span></figure></div>',
+                        unsafe_allow_html=True)
         chips = "".join(f'<span class="chip">{html.escape(str(t))}</span>'
                         for t in item.get("tags", []))
         if chips:
