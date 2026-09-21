@@ -1,7 +1,7 @@
 """
 kath.fund — Fundbüro · Katharineum zu Lübeck
 Architektur: Streamlit = Backend only. Die gesamte UI läuft als ein HTML-Dokument
-(Tailwind + daisyUI) in einem iframe (components.html). Kein Streamlit-DOM-Kampf.
+(Tailwind + daisyUI) direkt im Streamlit-DOM injiziert — kein iframe, keine Sandbox.
 
 Kommunikation:
   Python -> iframe:  items/claims als JSON eingebettet
@@ -473,13 +473,12 @@ UI = r"""
 
   <!-- floating sidebar-button + FAB -->
   <button class="fixed top-3 left-3 z-40 w-10 h-10 rounded-xl bg-white border border-[var(--line)] shadow-sm flex items-center justify-center"
-          onclick="try{drawer.showModal()}catch(e){}" aria-label="Menü">
+          onclick="drawer.classList.add('modal-open')" aria-label="Menü">
     <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
   </button>
-  <button class="fixed bottom-4 right-4 z-40 h-12 px-4 rounded-full btn-accent shadow-lg text-sm font-semibold flex items-center gap-2"
-          onclick="openReport('camera')">
+  <a href="?view=report&mode=camera" class="fixed bottom-4 right-4 z-40 h-12 px-4 rounded-full btn-accent shadow-lg text-sm font-semibold flex items-center gap-2">
     <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Melden
-  </button>
+  </a>
 
   <!-- flash -->
   <div id="flash" class="hidden px-4 pt-3">
@@ -506,7 +505,7 @@ UI = r"""
 
     <!-- Zwei Wege -->
     <div class="grid grid-cols-2 gap-3 mt-4">
-      <div class="icard icard-hover p-4 cursor-pointer" onclick="openReport('camera')">
+      <div class="icard icard-hover p-4 cursor-pointer" onclick="location.href='?view=report&mode=camera'">
         <div class="w-10 h-10 rounded-xl bg-[var(--accent-fg)] flex items-center justify-center text-[var(--accent)]">
           <svg class="lucide" style="width:1.4em;height:1.4em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg>
         </div>
@@ -564,30 +563,30 @@ UI = r"""
   </div><!-- /app -->
 
 <!-- ============ DRAWER ============ -->
-<dialog id="drawer" class="modal modal-start">
+<div id="drawer" class="modal modal-start">
   <div class="modal-box max-w-xs p-0 rounded-r-2xl rounded-l-none overflow-hidden">
     <div class="p-4 border-b border-[var(--line)]">
       <img src="__LOGO__" class="w-32" alt="kath.fund">
       <p class="text-xs text-[var(--muted)] mt-2">Katharineum zu Lübeck</p>
     </div>
     <div class="p-3 space-y-0.5">
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.close();show('home')">
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.classList.remove('modal-open');show('home')">
         <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg> Start</button>
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.close();goSearchAll()">
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.classList.remove('modal-open');goSearchAll()">
         <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg> Alle Fundstücke</button>
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.close();openReport('camera')">
-        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg> Fund melden</button>
+      <a href="?view=report" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.classList.remove('modal-open')">
+        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg> Fund melden</a>
     </div>
     <div class="px-4 pt-2 pb-1 lbl">Kategorien</div>
     <div class="px-3 pb-2 max-h-56 overflow-y-auto" id="drawerCats"></div>
     <div class="px-4 pt-2 pb-1 lbl">Kennzahlen</div>
     <div class="px-4 pb-4 grid grid-cols-2 gap-2" id="statDrawer"></div>
   </div>
-  <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+  <button class="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white border border-[var(--line)] flex items-center justify-center text-[var(--muted)]" onclick="drawer.classList.remove('modal-open')">✕</button>
+</div>
 
 <!-- ============ CLAIM MODAL ============ -->
-<dialog id="claimModal" class="modal">
+<div id="claimModal" class="modal">
   <div class="modal-box max-w-md p-5">
     <h3 class="font-bold text-lg">Das ist meins</h3>
     <p class="text-sm text-[var(--muted)] mt-0.5" id="claimItemLabel"></p>
@@ -597,12 +596,11 @@ UI = r"""
         placeholder="Nachweis*: Was weiß nur die Besitzerin / der Besitzer? Inhalt, Gravur, Initialen …"></textarea>
     </div>
     <div class="modal-action">
-      <button class="btn btn-ghost btn-sm" onclick="claimModal.close()">Abbrechen</button>
+      <button class="btn btn-ghost btn-sm" onclick="claimModal.classList.remove('modal-open')">Abbrechen</button>
       <button class="btn btn-accent btn-sm" onclick="submitClaim()">Anspruch einreichen</button>
     </div>
   </div>
-  <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+</div>
 
 <script>
 const DATA = __DATA__;
@@ -610,6 +608,10 @@ const items = DATA.items;
 let currentView = 'home', lastGrid = null, filterCat = 'Alle', filterStatus = 'Alle';
 
 const $ = (s) => document.querySelector(s);
+['drawer','claimModal'].forEach(id => {
+  const m = document.getElementById(id);
+  if (m) m.addEventListener('click', e => { if (e.target === m) m.classList.remove('modal-open'); });
+});
 const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
 const KAT_ICON = {
   "Kleidung & Textilien": '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23Z"/>',
@@ -629,22 +631,14 @@ function showFlash(t) { if (!t) return;
 function show(v) { currentView = v;
   ['home','search','item'].forEach(x => $('#view-'+x).classList.toggle('hidden', x !== v));
   window.scrollTo(0,0); fitHeight(); }
-function fitHeight() {
-  try {
-    const f = window.frameElement;
-    if (f) f.style.height = Math.max(document.documentElement.scrollHeight, 600) + 'px';
-  } catch (e) {}
-}
-window.addEventListener('load', fitHeight);
-window.addEventListener('resize', fitHeight);
-setInterval(fitHeight, 500);
-function openReport(mode) { window.top.location.search = '?view=report' + (mode === 'camera' ? '&mode=camera' : ''); }
+
+function openReport() { location.search = '?view=report'; }
 function submitClaim() {
   const name = $('#claimName').value.trim(), proof = $('#claimProof').value.trim();
   const iid = claimModal.dataset.item;
   if (!name || !proof) { $('#claimName').classList.toggle('input-error', !name);
                          $('#claimProof').classList.toggle('textarea-error', !proof); return; }
-  window.top.location.search = `?action=claim&item=${iid}&name=${encodeURIComponent(name)}&proof=${encodeURIComponent(proof)}`;
+  location.search = `?action=claim&item=${iid}&name=${encodeURIComponent(name)}&proof=${encodeURIComponent(proof)}`;
 }
 
 function statusBadge(s) {
@@ -707,7 +701,8 @@ function openClaim(id) {
   claimModal.dataset.item = id;
   $('#claimItemLabel').textContent = `#${i.id} — ${i.titel} (${i.fundort})`;
   $('#claimName').value = ''; $('#claimProof').value = '';
-  claimModal.showModal();
+  claimModal.classList.add('modal-open');
+  drawer.classList.remove('modal-open');
 }
 
 function matches(i) {
@@ -725,7 +720,6 @@ function renderSearch() {
     ? list.map(i => card(i)).join('')
     : `<div class="col-span-full icard border-dashed py-10 text-center text-sm text-[var(--muted)]">
          Keine Treffer — anderen Suchbegriff probieren.</div>`;
-  fitHeight();
 }
 function renderChips() {
   const j = (s) => s.replace(/'/g, "\\'");
@@ -775,7 +769,7 @@ function init() {
 
   const j = (s) => s.replace(/'/g, "\\'");
   $('#drawerCats').innerHTML = DATA.categories.map(c =>
-    `<button class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-[#E9E8E4] text-[.82rem]" onclick="drawer.close();goSearchCat('${j(c)}')">
+    `<button class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-[#E9E8E4] text-[.82rem]" onclick="drawer.classList.remove('modal-open');goSearchCat('${j(c)}')">
       <span class="text-[var(--muted)]">${katSvg(c)}</span><span class="truncate">${esc(c)}</span>
       <span class="ml-auto text-[.66rem] text-[var(--muted)]">${items.filter(i=>i.kategorie===c).length}</span></button>`).join('');
 
@@ -791,8 +785,8 @@ function init() {
   if (heroImgs.length && flyBox) {
     // lane oben oder unten, nie hinter dem logo-band
     const lane = () => (Math.random() < .5)
-      ? 8 + Math.random() * 22          // oberer rand
-      : 68 + Math.random() * 24;        // unterer rand
+      ? 14 + Math.random() * 14         // oberer rand
+      : 70 + Math.random() * 14;        // unterer rand
     function spawnFly() {
       if (document.hidden) return;
       const src = heroImgs[Math.floor(Math.random() * heroImgs.length)];
@@ -814,7 +808,7 @@ function init() {
         const y = lane();
         const rot = (Math.random() * 14 - 7);
         const rot2 = (Math.random() * 10 - 5);
-        const dur = 14000 + Math.random() * 8000;   // langsam
+        const dur = 9000 + Math.random() * 3000;    // zuegig wieder weg
         el.style.top = y + '%';
         const from = ltr ? -w - 40 : boxW + 40;
         const to = ltr ? boxW + 40 : -w - 40;
@@ -827,9 +821,8 @@ function init() {
       };
     }
     spawnFly();
-    setInterval(spawnFly, 3200);
+    setInterval(spawnFly, 6000);
   }
-  fitHeight();
 }
 init();
 
@@ -844,6 +837,21 @@ UI = (UI
       .replace("__LOGO__", logo_main)
       .replace("__DATA__", data_json)
       .replace("__FLASH__", flash.replace("'", "\\'")))
+
+# ---- UI direkt in die Streamlit-Seite injizieren (kein iframe = keine Sandbox) ----
+def _extract(ui, tag_open, tag_close):
+    a = ui.index(tag_open) + len(tag_open)
+    b = ui.index(tag_close, a)
+    return ui[a:b]
+
+_css_part = _extract(UI, "<style>", "</style>")
+_body_part = _extract(UI, "<body>", "</body>")
+_script_part = _extract(UI, "<script>", "</script>")
+# blank lines wuerden markdown-it die html-bloecke zerreissen lassen
+_body_part = _body_part.replace("\n\n", "\n")
+st.markdown(f"<style>{_css_part}</style>", unsafe_allow_html=True)
+st.markdown(_body_part, unsafe_allow_html=True)
+st.markdown(f"<script>{_script_part}</script>", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
@@ -860,34 +868,4 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ÃuÃeres iframe: eigene Sandbox, damit Modal/Top-Navigation funktionieren
-OUTER = """<!doctype html><html><head><meta charset="utf-8">
-<style>html,body{margin:0;padding:0;background:#EDECE8;overflow:hidden}
-iframe{width:100%;border:0;display:block}</style></head><body>
-<iframe id="app" srcdoc="__SRCDOC__"
-  sandbox="allow-scripts allow-same-origin allow-top-navigation allow-forms allow-modals"
-  style="width:100%;height:1200px"></iframe>
-<script>
-const f = document.getElementById('app');
-function sync() {
-  try {
-    const h = f.contentDocument.documentElement.scrollHeight;
-    if (h > 200) f.style.height = h + 'px';
-  } catch (e) {}
-  try {
-    const of = window.frameElement;
-    if (of) {
-      const hh = parseInt(f.style.height) || 1200;
-      of.style.height = hh + 'px';
-      let p = of.parentElement;
-      if (p) p.style.height = hh + 'px';
-      if (p && p.parentElement) p.parentElement.style.height = 'auto';
-    }
-  } catch (e) {}
-}
-setInterval(sync, 400);
-window.addEventListener('message', sync);
-</script></body></html>"""
 
-outer = OUTER.replace("__SRCDOC__", html_mod.escape(UI, quote=True))
-components.html(outer, height=1200, scrolling=False)
