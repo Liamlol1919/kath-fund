@@ -142,6 +142,17 @@ def img_uri(filename, max_dim=420):
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
+def logo_top_uri():
+    p = Path("assets/logo_top.png")
+    if not p.exists():
+        return ""
+    img = Image.open(p)
+    img.thumbnail((640, 640), Image.Resampling.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
 def wordmark_uri():
     p = Path("assets/wordmark.png")
     if not p.exists():
@@ -303,7 +314,8 @@ if qp.get("view") == "report":
     """, unsafe_allow_html=True)
 
     uploaded_pil = None
-    up_mode = st.radio("Quelle", ["Datei hochladen", "Kamera"], horizontal=True)
+    up_mode = st.radio("Quelle", ["Kamera", "Datei hochladen"], horizontal=True,
+                       index=0 if qp.get("mode") == "camera" else 1)
     if up_mode == "Datei hochladen":
         f = st.file_uploader("Foto", type=["jpg", "jpeg", "png", "webp"], label_visibility="collapsed")
     else:
@@ -375,7 +387,8 @@ flash = st.session_state["flash"]
 st.session_state["flash"] = ""
 
 wordmark = wordmark_uri()
-data_json = json.dumps({"items": items_json, "wordmark": wordmark,
+logo_top = logo_top_uri()
+data_json = json.dumps({"items": items_json, "wordmark": wordmark, "logoTop": logo_top,
                         "categories": CATEGORIES, "claims": len(claims_json)},
                        ensure_ascii=False)
 
@@ -395,12 +408,10 @@ UI = r"""
   }
   body { font-family: 'Inter', system-ui, sans-serif; background: #F7F5F0; }
   .mono { font-family: ui-monospace, 'IBM Plex Mono', monospace; }
-  .hero-kicker { letter-spacing: .14em; }
   .card-hover { transition: transform .15s ease, box-shadow .15s ease; }
   .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,.10); }
   .clamp2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  .scroller { display:flex; gap:1rem; overflow-x:auto; padding:.4rem .2rem 1rem;
-              scroll-snap-type:x proximity; }
+  .scroller { display:flex; gap:1rem; overflow-x:auto; padding:.4rem .2rem 1rem; scroll-snap-type:x proximity; }
   .scroller > div { flex:0 0 240px; scroll-snap-align:start; }
   .scroller::-webkit-scrollbar { height:6px; }
   .scroller::-webkit-scrollbar-thumb { background:#D6D1C6; border-radius:3px; }
@@ -409,70 +420,120 @@ UI = r"""
 </head>
 <body class="min-h-screen">
 
-<!-- ============ TOPBAR ============ -->
-<div class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-40 shadow-sm px-2 md:px-6">
-  <div class="flex-1 gap-3">
-    <img src="__WORDMARK__" class="h-9 md:h-10 w-auto" alt="kath.fund">
+<!-- ============ DRAWER (Sidebar) ============ -->
+<div class="drawer">
+  <input id="drawerToggle" type="checkbox" class="drawer-toggle"/>
+  <div class="drawer-content">
+
+    <!-- ============ TOPBAR ============ -->
+    <div class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-40 shadow-sm px-2 md:px-6">
+      <div class="flex-none">
+        <label for="drawerToggle" class="btn btn-ghost btn-square" aria-label="Menü">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </label>
+      </div>
+      <div class="flex-1 flex justify-center">
+        <img src="__WORDMARK__" class="h-8 md:h-10 w-auto" alt="kath.fund">
+      </div>
+      <div class="flex-none flex items-center gap-2">
+        <span class="badge badge-outline hidden sm:inline-flex mono" id="openCount"></span>
+        <a class="btn btn-primary btn-sm md:btn" onclick="openReport()">📷 Fund melden</a>
+      </div>
+    </div>
+
+    <!-- ============ FLASH ============ -->
+    <div id="flash" class="hidden max-w-5xl mx-auto px-4 pt-4">
+      <div class="alert alert-success shadow"><span id="flashText"></span></div>
+    </div>
+
+    <!-- ============ VIEW: HOME ============ -->
+    <div id="view-home" class="max-w-5xl mx-auto px-4 pb-16">
+      <div class="text-center pt-6 md:pt-8 pb-2">
+        <img src="__LOGOTOP__" class="w-64 md:w-80 mx-auto" alt="kath.fund">
+      </div>
+
+      <!-- Suche -->
+      <form class="join w-full mt-4" onsubmit="doSearch(event)">
+        <input id="homeQ" class="input input-bordered join-item input-lg w-full bg-base-100"
+               placeholder="🔍 Jacke, AirPods, Schlüsselbund, #1002 …">
+        <button class="btn btn-neutral join-item input-lg">Suchen</button>
+      </form>
+
+      <!-- CTA: Etwas gefunden? -->
+      <div class="card bg-base-100 shadow-lg border border-base-200 mt-6 overflow-hidden">
+        <div class="card-body p-6 md:p-10 items-center text-center gap-3">
+          <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+            <span class="text-4xl">🎒</span>
+          </div>
+          <h2 class="card-title text-2xl md:text-3xl justify-center">Etwas gefunden?</h2>
+          <p class="text-base-content/60 max-w-md">Mach ein Foto oder lade eins hoch — die Kategorie wird
+          automatisch erkannt und du kannst das Fundstück direkt eintragen.</p>
+          <div class="flex flex-col sm:flex-row gap-3 mt-2 w-full sm:w-auto">
+            <a class="btn btn-primary btn-lg" onclick="openReport('camera')">📷 Foto aufnehmen</a>
+            <a class="btn btn-outline btn-lg" onclick="openReport('upload')">📄 Datei hochladen</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kategorie-Scroller -->
+      <h2 class="text-xl font-bold mt-8 mb-1">Kategorien</h2>
+      <p class="text-sm text-base-content/50 mb-2">Von Elektronik bis Klamotten — tippen zum Filtern</p>
+      <div class="scroller" id="scrollerCats"></div>
+
+      <!-- Neu -->
+      <h2 class="text-xl font-bold mt-8 mb-1">Neu im Fundbüro</h2>
+      <p class="text-sm text-base-content/50 mb-2">Zuletzt eingegegangene Fundstücke</p>
+      <div class="scroller" id="scrollerNew"></div>
+
+      <!-- Kategorien-Liste -->
+      <h2 class="text-xl font-bold mt-8 mb-1">Alle Bereiche</h2>
+      <p class="text-sm text-base-content/50 mb-3">Direkt zum gefilterten Verzeichnis</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="catList"></div>
+    </div>
+
+    <!-- ============ VIEW: SEARCH ============ -->
+    <div id="view-search" class="max-w-5xl mx-auto px-4 pb-16 hidden">
+      <button class="btn btn-ghost btn-sm mt-4 -ml-3" onclick="show('home')">← Start</button>
+      <h1 class="text-2xl font-bold mt-2" id="searchTitle">Alle Fundstücke</h1>
+      <form class="join w-full mt-3" onsubmit="doSearchFromView(event)">
+        <input id="searchQ" class="input input-bordered join-item w-full bg-base-100"
+               placeholder="🔍 Suchen oder #Belegnummer …">
+        <button class="btn btn-neutral join-item">Los</button>
+      </form>
+      <div class="flex flex-wrap gap-2 mt-4" id="catChips"></div>
+      <div class="flex flex-wrap gap-2 mt-2" id="statusChips"></div>
+      <p class="text-sm text-base-content/50 mt-4" id="resultCount"></p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4" id="searchGrid"></div>
+    </div>
+
+    <!-- ============ VIEW: DETAIL ============ -->
+    <div id="view-item" class="max-w-4xl mx-auto px-4 pb-16 hidden">
+      <button class="btn btn-ghost btn-sm mt-4 -ml-3" onclick="backFromItem()">← Zurück</button>
+      <div id="itemDetail" class="mt-3"></div>
+    </div>
   </div>
-  <div class="flex-none flex items-center gap-2">
-    <span class="badge badge-outline hidden sm:inline-flex mono" id="openCount"></span>
-    <a class="btn btn-primary btn-sm md:btn" onclick="openReport()">📷 Fund melden</a>
+
+  <!-- ============ DRAWER-SIDEBAR ============ -->
+  <div class="drawer-side z-50">
+    <label for="drawerToggle" class="drawer-overlay" aria-label="Schließen"></label>
+    <aside class="bg-base-100 min-h-full w-72 p-4 border-r border-base-300">
+      <img src="__LOGOTOP__" class="w-40 mx-auto mb-4" alt="kath.fund">
+      <ul class="menu w-full gap-1">
+        <li><a onclick="closeDrawer();show('home')"><b>🏠 Start</b></a></li>
+        <li><a onclick="closeDrawer();goSearchAll()"><b>🔍 Alle Fundstücke</b></a></li>
+        <li><a onclick="closeDrawer();openReport()">📷 Fund melden</a></li>
+      </ul>
+      <div class="divider my-2">Kategorien</div>
+      <ul class="menu w-full gap-0.5" id="drawerCats"></ul>
+      <div class="divider my-2">Status</div>
+      <ul class="menu w-full gap-0.5" id="drawerStatus"></ul>
+      <div class="divider my-2">Kennzahlen</div>
+      <div id="statDrawer"></div>
+      <p class="text-xs text-base-content/40 mt-4 text-center">Katharineum zu Lübeck · Fundbüro</p>
+    </aside>
   </div>
-</div>
-
-<!-- ============ FLASH ============ -->
-<div id="flash" class="hidden max-w-5xl mx-auto px-4 pt-4">
-  <div class="alert alert-success shadow"><span id="flashText"></span></div>
-</div>
-
-<!-- ============ VIEW: HOME ============ -->
-<div id="view-home" class="max-w-5xl mx-auto px-4 pb-16">
-  <div class="text-center pt-8 md:pt-12 pb-4">
-    <img src="__WORDMARK__" class="w-56 md:w-72 mx-auto" alt="kath.fund">
-    <p class="hero-kicker mono uppercase text-xs text-base-content/60 mt-3">
-      Katharineum zu Lübeck · <span class="text-primary font-semibold">Amtliches Fundverzeichnis</span>
-    </p>
-  </div>
-
-  <form class="join w-full mt-4" onsubmit="doSearch(event)">
-    <input id="homeQ" class="input input-bordered join-item input-lg w-full bg-base-100"
-           placeholder="🔍 Jacke, AirPods, Schlüsselbund, #1002 …">
-    <button class="btn btn-neutral join-item input-lg">Suchen</button>
-  </form>
-
-  <div class="stats stats-vertical sm:stats-horizontal bg-base-100 shadow mt-8 w-full">
-    <div class="stat py-4"><div class="stat-title text-xs">Offen</div><div class="stat-value text-primary text-2xl" id="statOpen">0</div></div>
-    <div class="stat py-4"><div class="stat-title text-xs">Diese Woche</div><div class="stat-value text-2xl" id="statNew">0</div></div>
-    <div class="stat py-4"><div class="stat-title text-xs">Zurückgeführt</div><div class="stat-value text-success text-2xl" id="statDone">0</div></div>
-    <div class="stat py-4"><div class="stat-title text-xs">Gesamt</div><div class="stat-value text-2xl" id="statTotal">0</div></div>
-  </div>
-
-  <h2 class="text-xl font-bold mt-10 mb-1">Neu im Fundbüro</h2>
-  <p class="text-sm text-base-content/50 mb-2">Zuletzt eingegegangene Fundstücke</p>
-  <div class="scroller" id="scrollerNew"></div>
-
-  <div id="catSections"></div>
-</div>
-
-<!-- ============ VIEW: SEARCH ============ -->
-<div id="view-search" class="max-w-5xl mx-auto px-4 pb-16 hidden">
-  <button class="btn btn-ghost btn-sm mt-4 -ml-3" onclick="show('home')">← Start</button>
-  <h1 class="text-2xl font-bold mt-2" id="searchTitle">Alle Fundstücke</h1>
-  <form class="join w-full mt-3" onsubmit="doSearchFromView(event)">
-    <input id="searchQ" class="input input-bordered join-item w-full bg-base-100"
-           placeholder="🔍 Suchen oder #Belegnummer …">
-    <button class="btn btn-neutral join-item">Los</button>
-  </form>
-  <div class="flex flex-wrap gap-2 mt-4" id="catChips"></div>
-  <div class="flex flex-wrap gap-2 mt-2" id="statusChips"></div>
-  <p class="text-sm text-base-content/50 mt-4" id="resultCount"></p>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4" id="searchGrid"></div>
-</div>
-
-<!-- ============ VIEW: DETAIL ============ -->
-<div id="view-item" class="max-w-4xl mx-auto px-4 pb-16 hidden">
-  <button class="btn btn-ghost btn-sm mt-4 -ml-3" onclick="backFromItem()">← Zurück</button>
-  <div id="itemDetail" class="mt-3"></div>
 </div>
 
 <!-- ============ MODAL: BEANSPRUCHEN ============ -->
@@ -497,31 +558,32 @@ UI = r"""
 const DATA = __DATA__;
 const items = DATA.items;
 let currentView = 'home';
-let lastGrid = null;      // Kehrzurück-Kontext für Detail
+let lastGrid = null;
 let filterCat = 'Alle';
 let filterStatus = 'Alle';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+const KAT_ICON = {
+  "Kleidung & Textilien": "🧥", "Trinkflaschen & Brotdosen": "🥤",
+  "Rucksäcke & Taschen": "🎒", "Elektronik & Kabel": "🎧",
+  "Schlüssel & Wertsachen": "🔑", "Schulmaterial & Bücher": "📚",
+  "Sportbekleidung": "👟", "Sonstiges": "📦",
+};
 
-/* ---------- Flash ---------- */
 function showFlash(t) {
   if (!t) return;
   $('#flashText').textContent = t;
   $('#flash').classList.remove('hidden');
 }
-
-/* ---------- Views ---------- */
 function show(v) {
   currentView = v;
   ['home','search','item'].forEach(x => $('#view-'+x).classList.toggle('hidden', x !== v));
   window.scrollTo(0,0);
 }
+function closeDrawer() { $('#drawerToggle').checked = false; }
+function openReport(mode) { window.parent.location.search = '?view=report' + (mode === 'camera' ? '&mode=camera' : ''); }
 
-/* ---------- Aktionen Richtung Python ---------- */
-function openReport() {
-  window.parent.location.search = '?view=report';
-}
 function submitClaim() {
   const name = $('#claimName').value.trim();
   const proof = $('#claimProof').value.trim();
@@ -531,7 +593,6 @@ function submitClaim() {
   window.parent.location.search = `?action=claim&item=${iid}&name=${encodeURIComponent(name)}&proof=${encodeURIComponent(proof)}`;
 }
 
-/* ---------- Rendering ---------- */
 function statusBadge(s) {
   const map = { 'Offen':'badge-warning', 'Beansprucht':'badge-info',
                 'Abgeholt':'badge-success', 'Entsorgt':'badge-error' };
@@ -553,9 +614,6 @@ function card(i) {
       <div class="flex flex-wrap gap-1.5 mt-1">${statusBadge(i.status)}${neu}</div>
     </div>
   </div>`;
-}
-function horizontalRow(list, el) {
-  el.innerHTML = list.map(i => `<div>${card(i)}</div>`).join('');
 }
 
 function openItem(id, ctx) {
@@ -606,7 +664,6 @@ function openClaim(id) {
   claimModal.showModal();
 }
 
-/* ---------- Suche / Filter (pure JS, instant) ---------- */
 function matches(i) {
   const q = $('#searchQ').value.trim().toLowerCase();
   if (filterCat !== 'Alle' && i.kategorie !== filterCat) return false;
@@ -628,44 +685,95 @@ function chip(label, active, onclick) {
   return `<button class="btn btn-sm rounded-full ${active?'btn-neutral':'btn-outline btn-ghost'}" onclick="${onclick}">${label}</button>`;
 }
 function renderChips() {
+  const j = (s) => s.replace(/'/g, "\\'");
   $('#catChips').innerHTML = ['Alle', ...DATA.categories]
-    .map(c => chip(c, filterCat===c, `setCat('${c.replaceAll("'", "\\'")}')`)).join('');
+    .map(c => chip(c + (c==='Alle'?'':` (${items.filter(i=>i.kategorie===c).length})`),
+                   filterCat===c, `setCat('${j(c)}')`)).join('');
   $('#statusChips').innerHTML = ['Alle','Offen','Beansprucht','Abgeholt']
     .map(s => chip(s, filterStatus===s, `setStatus('${s}')`)).join('');
 }
 function setCat(c) { filterCat = c; renderChips(); renderSearch(); }
 function setStatus(s) { filterStatus = s; renderChips(); renderSearch(); }
+function goSearchAll() {
+  $('#searchQ').value = ''; filterCat='Alle'; filterStatus='Alle';
+  renderChips(); renderSearch();
+  $('#searchTitle').textContent = 'Alle Fundstücke'; show('search');
+}
+function goSearchCat(cat) {
+  $('#searchQ').value = ''; filterCat=cat; filterStatus='Alle';
+  renderChips(); renderSearch();
+  $('#searchTitle').textContent = cat; show('search');
+}
 function doSearch(e) { e.preventDefault();
   $('#searchQ').value = $('#homeQ').value;
   filterCat='Alle'; filterStatus='Alle'; renderChips(); renderSearch();
   $('#searchTitle').textContent = 'Suchergebnisse'; show('search'); }
 function doSearchFromView(e) { e.preventDefault(); renderSearch(); }
 
-/* ---------- Init ---------- */
+function katCard(cat) {
+  const icon = KAT_ICON[cat] || '📦';
+  const n = items.filter(i=>i.kategorie===cat).length;
+  return `<div>
+    <div class="card bg-base-100 shadow card-hover cursor-pointer h-full" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">
+      <div class="card-body p-4 items-center text-center gap-1">
+        <span class="text-4xl">${icon}</span>
+        <h3 class="card-title text-sm justify-center">${esc(cat)}</h3>
+        <span class="text-xs text-base-content/50">${n} Stück(e)</span>
+      </div>
+    </div>
+  </div>`;
+}
+
 function init() {
   showFlash('__FLASH__');
   const open = items.filter(i=>i.status==='Offen');
-  $('#statOpen').textContent = open.length;
-  $('#statNew').textContent = items.filter(i=>i.neu).length;
-  $('#statDone').textContent = items.filter(i=>i.status==='Abgeholt').length;
-  $('#statTotal').textContent = items.length;
   $('#openCount').textContent = `${open.length} offen`;
+  $('#statDrawer').innerHTML = `
+    <div class="stats stats-vertical w-full bg-base-200/40">
+      <div class="stat py-2"><div class="stat-title text-xs">Offen</div>
+        <div class="stat-value text-primary text-xl">${open.length}</div></div>
+      <div class="stat py-2"><div class="stat-title text-xs">Diese Woche</div>
+        <div class="stat-value text-xl">${items.filter(i=>i.neu).length}</div></div>
+      <div class="stat py-2"><div class="stat-title text-xs">Zurückgeführt</div>
+        <div class="stat-value text-success text-xl">${items.filter(i=>i.status==='Abgeholt').length}</div></div>
+      <div class="stat py-2"><div class="stat-title text-xs">Gesamt</div>
+        <div class="stat-value text-xl">${items.length}</div></div>
+    </div>`;
 
+  // Kategorie-Scroller
+  $('#scrollerCats').innerHTML = DATA.categories.map(katCard).join('');
+
+  // Neu
   const neu = [...items].filter(i=>i.status!=='Entsorgt')
-    .sort((a,b)=>b.datum_fund.localeCompare(a.datum_fund)).slice(0,8);
-  horizontalRow(neu, $('#scrollerNew'));
+    .sort((a,b)=>b.datum_fund.localeCompare(a.datum_fund)).slice(0,10);
+  $('#scrollerNew').innerHTML = neu.map(i=>`<div>${card(i)}</div>`).join('');
 
-  const sections = DATA.categories.map(cat => {
-    const list = items.filter(i=>i.kategorie===cat)
-      .sort((a,b)=>b.datum_fund.localeCompare(a.datum_fund)).slice(0,8);
-    if (!list.length) return '';
-    return `<h2 class="text-xl font-bold mt-10 mb-1">${esc(cat)}</h2>
-      <p class="text-sm text-base-content/50 mb-2">${list.length} Fundstück(e)</p>
-      <div class="scroller">${list.map(i=>`<div>${card(i)}</div>`).join('')}</div>`;
+  // Kategorien-Liste mit Buttons
+  $('#catList').innerHTML = DATA.categories.map(cat => {
+    const icon = KAT_ICON[cat] || '📦';
+    const n = items.filter(i=>i.kategorie===cat).length;
+    return `<div class="flex items-center gap-3 bg-base-100 border border-base-200 rounded-box px-4 py-3 shadow-sm">
+      <span class="text-2xl">${icon}</span>
+      <div class="flex-1"><b class="text-sm">${esc(cat)}</b>
+        <div class="text-xs text-base-content/50">${n} Fundstück(e)</div></div>
+      <button class="btn btn-sm btn-outline" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">Ansehen →</button>
+    </div>`;
   }).join('');
-  $('#catSections').innerHTML = sections;
+
+  // Drawer-Menüs
+  const j = (s) => s.replace(/'/g, "\\'");
+  $('#drawerCats').innerHTML = DATA.categories.map(c =>
+    `<li><a class="text-sm" onclick="closeDrawer();goSearchCat('${j(c)}')">${KAT_ICON[c]||'📦'} ${esc(c)}
+      <span class="badge badge-ghost badge-xs ml-auto">${items.filter(i=>i.kategorie===c).length}</span></a></li>`).join('');
+  $('#drawerStatus').innerHTML = ['Alle','Offen','Beansprucht','Abgeholt'].map(s =>
+    `<li><a class="text-sm" onclick="closeDrawer();goSearchStatus('${s}')">${s}</a></li>`).join('');
 
   renderChips();
+}
+function goSearchStatus(s) {
+  $('#searchQ').value = ''; filterCat='Alle'; filterStatus=s;
+  renderChips(); renderSearch();
+  $('#searchTitle').textContent = 'Fundstücke · ' + s; show('search');
 }
 init();
 </script>
@@ -675,7 +783,8 @@ init();
 
 UI = (UI
       .replace("__WORDMARK__", wordmark)
+      .replace("__LOGOTOP__", logo_top)
       .replace("__DATA__", data_json)
       .replace("__FLASH__", flash.replace("'", "\\'")))
 
-components.html(UI, height=780, scrolling=True)
+components.html(UI, height=1400, scrolling=True)
