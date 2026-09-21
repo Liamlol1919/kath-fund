@@ -322,81 +322,6 @@ elif action == "report_done":
 # 5. REPORT-ANSICHT (nativ, wegen Datei-Upload)
 # =============================================================================
 
-if st.session_state["native_view"] == "report":
-    st.markdown("""
-    <style>
-      .stApp { background: #F7F5F0; }
-      .report-wrap { max-width: 760px; margin: 0 auto; padding: 1rem 1rem 3rem; }
-      .rp-title { font-size: 1.6rem; font-weight: 800; }
-      .rp-sub { color: #6E6862; margin-bottom: 1rem; }
-      .vcard { background: #fff; border: 1px solid #E4E0D8; border-radius: 12px;
-               box-shadow: 0 1px 2px rgba(0,0,0,.05); padding: 16px 18px; margin-top: 10px;
-               display:flex; gap:14px; align-items:center; }
-      .vstamp { background:#F6DEDA; color:#B23A2A; font-weight:700; font-size:.72rem;
-                padding:6px 10px; border-radius:8px; white-space:nowrap; }
-    </style>
-    <div class="report-wrap">
-    <button onclick="window.parent.postMessage({ kfund: 'home' }, '*')"
-      style="border:1px solid #D6D5D1;background:#fff;border-radius:10px;padding:6px 12px;font-size:.85rem;cursor:pointer;">← Zurück zur App</button>
-    <div class="rp-title">📷 Fund melden</div>
-    <div class="rp-sub">Foto aufnehmen oder hochladen — Kategorie wird automatisch vorgeschlagen.
-    Nach dem Eintrag landet das Fundstück direkt im Verzeichnis.</div></div>
-    """, unsafe_allow_html=True)
-
-    uploaded_pil = None
-    up_mode = st.radio("Quelle", ["Kamera", "Datei hochladen"], horizontal=True,
-                       index=0 if st.session_state.get("up_mode_default") == "Kamera" else 1)
-    if up_mode == "Datei hochladen":
-        f = st.file_uploader("Foto", type=["jpg", "jpeg", "png", "webp"], label_visibility="collapsed")
-    else:
-        f = st.camera_input("Kamera", label_visibility="collapsed")
-    if f is not None:
-        uploaded_pil = Image.open(f).convert("RGB")
-
-    ai_cat, ai_conf, ai_engine = "Sonstiges", 0.0, "Standby"
-    if uploaded_pil is not None:
-        prev = uploaded_pil.copy()
-        prev.thumbnail((760, 760), Image.Resampling.LANCZOS)
-        st.image(prev, width="stretch")
-        with st.spinner("Kategorie wird erkannt …"):
-            ai_cat, ai_conf, ai_engine = analyze_image_ai(uploaded_pil)
-        st.markdown(f"""
-        <div class="vcard"><span class="vstamp">Vorschlag</span>
-        <div><b style="font-size:1.05rem">{html_mod.escape(ai_cat)}</b>
-        <div style="font-size:.75rem;color:#6E6862">Sicherheit {ai_conf*100:.0f} % · {html_mod.escape(ai_engine)}</div>
-        </div></div>""", unsafe_allow_html=True)
-        if ai_conf < 0.6:
-            st.info("Unsicherer Vorschlag — bitte Kategorie unten prüfen.")
-
-    with st.form("report_form"):
-        t = st.text_input("Bezeichnung*", placeholder="z. B. Dunkelblaue Regenjacke, Größe M")
-        kat = st.selectbox("Kategorie*", CATEGORIES,
-                           index=CATEGORIES.index(ai_cat) if ai_cat in CATEGORIES else len(CATEGORIES) - 1)
-        c1, c2 = st.columns(2)
-        ort = c1.selectbox("Fundort*", LOCATIONS)
-        lager = c2.text_input("Lagerort*", value="Hausmeisterbüro (Raum 001)")
-        tags = st.text_input("Schlagworte", placeholder="kommagetrennt: Nike, Blau, Größe L")
-        desc = st.text_area("Besondere Merkmale", placeholder="Kratzer, Initialen, Inhalt …")
-        if st.form_submit_button("Ins Fundbuch eintragen", type="primary", use_container_width=True):
-            if not t.strip():
-                st.error("Bitte eine Bezeichnung angeben.")
-            else:
-                new_id = max([i["id"] for i in items], default=1000) + 1
-                img_name = save_uploaded_image(uploaded_pil, new_id) if uploaded_pil is not None else None
-                parsed = [x.strip() for x in tags.split(",") if x.strip()] or [ai_cat.split(" ")[0]]
-                items.insert(0, {
-                    "id": new_id, "titel": t.strip(), "kategorie": kat, "fundort": ort,
-                    "abgabeort": lager.strip() or "Hausmeisterbüro (Raum 001)",
-                    "datum_fund": heute,
-                    "datum_ablauf": (datetime.date.today() + datetime.timedelta(days=90)).isoformat(),
-                    "status": "Offen", "beschreibung": desc.strip() or "Keine nähere Beschreibung.",
-                    "image_file": img_name, "tags": parsed})
-                save_json(ITEMS_FILE, items)
-                st.session_state["flash"] = f"Fundstück „{t.strip()}“ wurde eingetragen 🎉"
-                st.session_state["native_view"] = None
-                st.rerun()
-    st.stop()
-
 # =============================================================================
 # 5b. VERSTECKTE NATIVE AKTIONS-WIDGETS (das äußere iframe klickt sie per DOM)
 # =============================================================================
@@ -450,6 +375,126 @@ if st.button("SUBMIT_CLAIM", key="kfund_claim_submit"):
         st.session_state[k] = ""
     st.session_state["native_view"] = None
     st.rerun()
+
+if st.session_state["native_view"] == "report":
+    st.markdown("""
+    <style>
+      .stApp { background: #EDECE8; }
+      header[data-testid="stHeader"] { display: none !important; }
+      .block-container { padding: 0 !important; max-width: 100% !important; }
+      .report-wrap { max-width: 680px; margin: 0 auto; padding: 1.2rem 1.1rem 4rem; }
+      .rp-title { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; margin-top: .6rem; }
+      .rp-sub { color: #71717A; margin-bottom: .4rem; font-size: .92rem; }
+      .rp-card { background: #fff; border: 1px solid #D6D5D1; border-radius: 16px;
+                 box-shadow: 0 1px 2px rgba(0,0,0,.05); padding: 18px 20px; margin-top: 14px; }
+      .rp-card h3 { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: .08em; color: #71717A; margin: 0 0 .8rem; }
+      .vcard { background: #fff; border: 1px solid #D6D5D1; border-radius: 14px;
+               box-shadow: 0 1px 2px rgba(0,0,0,.05); padding: 16px 18px; margin-top: 12px;
+               display:flex; gap:14px; align-items:center; }
+      .vstamp { background:#F6DEDA; color:#B23A2A; font-weight:700; font-size:.72rem;
+                padding:6px 10px; border-radius:8px; white-space:nowrap; }
+      /* inputs im report */
+      .report-wrap input, .report-wrap textarea {
+        background: #fff !important; border: 1px solid #D6D5D1 !important;
+        border-radius: 10px !important; padding: .55rem .8rem !important; font-size: .92rem !important;
+      }
+      .report-wrap input:focus, .report-wrap textarea:focus {
+        border-color: #B23A2A !important; box-shadow: 0 0 0 3px rgba(178,58,42,.12) !important; outline: none;
+      }
+      .report-wrap label { font-size: .78rem !important; font-weight: 600 !important; color: #44403A !important; }
+      .report-wrap [data-testid="stForm"] { background: #fff; border: 1px solid #D6D5D1;
+        border-radius: 16px; padding: 20px 20px 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); margin-top: 14px; }
+      .report-wrap [data-testid="stFormSubmitButton"] button {
+        background: #B23A2A !important; color: #fff !important; border: none !important;
+        border-radius: 999px !important; font-weight: 600 !important; padding: .65rem 1.4rem !important;
+      }
+      .report-wrap [data-testid="stRadio"] [role="radiogroup"] { gap: .4rem; }
+      .report-wrap [data-testid="stRadio"] label {
+        border: 1px solid #D6D5D1 !important; border-radius: 999px !important;
+        padding: .3rem .9rem !important; background: #fff;
+      }
+      .report-wrap [data-testid="stRadio"] label:has(input:checked) { background: #18181B; border-color: #18181B; }
+      .report-wrap [data-testid="stRadio"] label:has(input:checked) p { color: #fff !important; }
+      .rp-back { border: 1px solid #D6D5D1; background: #fff; border-radius: 999px;
+                 padding: 6px 14px; font-size: .85rem; cursor: pointer; }
+      .rp-back:hover { background: #F4F4F5; }
+    </style>
+    <div class="report-wrap">
+    <button class="rp-back" onclick="window.parent.postMessage({ kfund: 'home' }, '*')">← Zurück zur App</button>
+    <div class="rp-title">📷 Fund melden</div>
+    <div class="rp-sub">Foto aufnehmen oder hochladen — Kategorie wird automatisch vorgeschlagen.
+    Nach dem Eintrag landet das Fundstück direkt im Verzeichnis.</div></div>
+    """, unsafe_allow_html=True)
+
+    uploaded_pil = None
+    up_mode = st.radio("Quelle", ["Kamera", "Datei hochladen"], horizontal=True,
+                       index=0 if st.session_state.get("up_mode_default") == "Kamera" else 1)
+    if up_mode == "Datei hochladen":
+        f = st.file_uploader("Foto", type=["jpg", "jpeg", "png", "webp"], label_visibility="collapsed")
+    else:
+        f = st.camera_input("Kamera", label_visibility="collapsed")
+    if f is not None:
+        uploaded_pil = Image.open(f).convert("RGB")
+
+    ai_cat, ai_conf, ai_engine = "Sonstiges", 0.0, "Standby"
+    if uploaded_pil is not None:
+        prev = uploaded_pil.copy()
+        prev.thumbnail((760, 760), Image.Resampling.LANCZOS)
+        st.image(prev, width="stretch")
+        with st.spinner("Kategorie wird erkannt …"):
+            ai_cat, ai_conf, ai_engine = analyze_image_ai(uploaded_pil)
+        st.markdown(f"""
+        <div class="vcard"><span class="vstamp">Vorschlag</span>
+        <div><b style="font-size:1.05rem">{html_mod.escape(ai_cat)}</b>
+        <div style="font-size:.75rem;color:#6E6862">Sicherheit {ai_conf*100:.0f} % · {html_mod.escape(ai_engine)}</div>
+        </div></div>""", unsafe_allow_html=True)
+        if ai_conf < 0.6:
+            st.info("Unsicherer Vorschlag — bitte Kategorie unten prüfen.")
+
+    # auto-fill: vorschlaege nach erkennung vorbefuellen (ueberschreibbar)
+    ai_label = ai_engine.split("·")[-1].strip() if "·" in ai_engine else ""
+    if ai_label and ai_label.lower() not in ("standby", "kein modell verfügbar", "bildmerkmale · unsicher"):
+        suggestion = ai_label.title()
+    else:
+        suggestion = ""
+    if suggestion and not st.session_state.get("rep_titel"):
+        st.session_state["rep_titel"] = suggestion
+    if suggestion and not st.session_state.get("rep_tags"):
+        st.session_state["rep_tags"] = ", ".join(w.capitalize() for w in ai_label.split()[:2])
+
+    with st.form("report_form"):
+        t = st.text_input("Bezeichnung*", key="rep_titel",
+                          placeholder="z. B. Dunkelblaue Regenjacke, Größe M")
+        kat = st.selectbox("Kategorie*", CATEGORIES,
+                           index=CATEGORIES.index(ai_cat) if ai_cat in CATEGORIES else len(CATEGORIES) - 1)
+        c1, c2 = st.columns(2)
+        ort = c1.selectbox("Fundort*", LOCATIONS)
+        lager = c2.text_input("Lagerort*", value="Hausmeisterbüro (Raum 001)")
+        tags = st.text_input("Schlagworte", key="rep_tags",
+                             placeholder="kommagetrennt: Nike, Blau, Größe L")
+        desc = st.text_area("Besondere Merkmale", placeholder="Kratzer, Initialen, Inhalt …")
+        if st.form_submit_button("Ins Fundbuch eintragen", type="primary", use_container_width=True):
+            if not t.strip():
+                st.error("Bitte eine Bezeichnung angeben.")
+            else:
+                new_id = max([i["id"] for i in items], default=1000) + 1
+                img_name = save_uploaded_image(uploaded_pil, new_id) if uploaded_pil is not None else None
+                parsed = [x.strip() for x in tags.split(",") if x.strip()] or [ai_cat.split(" ")[0]]
+                items.insert(0, {
+                    "id": new_id, "titel": t.strip(), "kategorie": kat, "fundort": ort,
+                    "abgabeort": lager.strip() or "Hausmeisterbüro (Raum 001)",
+                    "datum_fund": heute,
+                    "datum_ablauf": (datetime.date.today() + datetime.timedelta(days=90)).isoformat(),
+                    "status": "Offen", "beschreibung": desc.strip() or "Keine nähere Beschreibung.",
+                    "image_file": img_name, "tags": parsed})
+                save_json(ITEMS_FILE, items)
+                st.session_state["flash"] = f"Fundstück „{t.strip()}“ wurde eingetragen 🎉"
+                for k in ("rep_titel", "rep_tags"):
+                    st.session_state.pop(k, None)
+                st.session_state["native_view"] = None
+                st.rerun()
+    st.stop()
 
 # =============================================================================
 # 6. UI (HTML mit daisyUI, im component-iframe)
@@ -514,6 +559,16 @@ UI = r"""
   .scroller::-webkit-scrollbar { height: 5px; }
   .scroller::-webkit-scrollbar-thumb { background:#D4D4D8; border-radius: 3px; }
   dialog::backdrop { background: rgba(24,24,27,.5); backdrop-filter: blur(2px); }
+  /* drawer als echtes linkes panel (div-modal) */
+  #drawer { justify-content: flex-start !important; align-items: stretch !important; padding: 0 !important; }
+  #drawer .modal-box {
+    width: 18rem !important; max-width: 86vw !important;
+    height: 100dvh !important; max-height: none !important;
+    border-radius: 0 !important; margin: 0 !important; padding: 0 !important;
+    background: #fff !important; color: var(--fg);
+    box-shadow: 4px 0 24px rgba(24,24,27,.12);
+    transform: none !important; translate: none !important;
+  }
   .btn-accent { background: var(--accent); color: #fff; border: none; }
   .btn-accent:hover { background: #B91C1C; color:#fff; }
   .chip { border:1px solid var(--line); background:#fff; color:var(--fg); border-radius:999px;
