@@ -54,21 +54,6 @@ st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
 
-    @import url('https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css');
-
-    [data-theme="kfund"], :root {{
-        --rounded-box: .75rem; --rounded-btn: .5rem; --rounded-badge: 1.9rem;
-        --p: 30% 0.05 60; --pc: 96% 0.02 60;
-        --s: 43% 0.16 25; --sc: 96% 0.03 25;
-        --a: 45% 0.09 150; --ac: 96% 0.02 150;
-        --n: 25% 0.02 70; --nc: 94% 0.01 70;
-        --b1: 98% 0.01 90; --b2: 95% 0.015 85; --b3: 91% 0.02 80;
-        --bc: 22% 0.03 70; --in: 65% 0.13 230; --inc: 0% 0 0;
-        --su: 55% 0.14 155; --suc: 0% 0 0; --wa: 70% 0.14 80; --wac: 0% 0 0;
-        --er: 50% 0.18 25; --erc: 0% 0 0;
-    }}
-    body {{ color: hsl(var(--bc)) !important; }}
-
     :root {{
         --paper: #F2EEE3;
         --card: #FFFCF4;
@@ -82,6 +67,7 @@ st.markdown(f"""
         --blue: #2B4C7E;
         --amber: #94641A;
         --hard: 3px 3px 0 rgba(22, 19, 14, .16);
+        --rounded-box: .8rem; --rounded-btn: .55rem; --rounded-badge: 2rem;
     }}
 
     ::selection {{ background: var(--red); color: #FFF7EE; }}
@@ -335,6 +321,36 @@ st.markdown(f"""
     details[data-testid="stExpander"] {{ border: 1.5px solid var(--ink); border-radius: 9px; background: var(--card); }}
     details[data-testid="stExpander"] summary {{ font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }}
     div[data-testid="stSpinner"] p {{ font-family: 'IBM Plex Mono', monospace; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; }}
+
+    /* ================= daisyUI-Komponenten (eigener Layer, kein Tailwind-Reset) ================= */
+    .card {
+        position: relative; display: flex; flex-direction: column; border-radius: var(--rounded-box);
+    }
+    .card figure { margin: 0; }
+    .card-body { padding: 1rem; display: flex; flex-direction: column; flex: 1; }
+    .card-title { display: flex; align-items: center; gap: .4rem; font-weight: 700; margin: 0; }
+    .card-title.text-base { font-size: 1.02rem; line-height: 1.3; }
+
+    .badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        height: 1.45rem; padding: 0 .55rem; border-radius: var(--rounded-badge);
+        border: 1px solid var(--ink); font-size: .62rem; font-weight: 600;
+        white-space: nowrap; text-transform: uppercase; letter-spacing: .06em;
+        font-family: 'IBM Plex Mono', monospace;
+    }
+    .badge-sm { height: 1.2rem; padding: 0 .45rem; font-size: .56rem; }
+    .badge-ghost { background: var(--field); color: var(--ink-2); border-color: var(--line); }
+    .badge-outline { background: transparent; }
+    .badge-warning { background: #EFDFAF; color: var(--ink); }
+    .badge-info { background: #C9D8EC; color: var(--ink); }
+    .badge-success { background: #CBDCC4; color: var(--ink); }
+    .badge-error { background: #EBC4BC; color: var(--red); border-color: var(--red); }
+    .badge-error.badge-outline { background: var(--card); color: var(--red); }
+    .card-new { margin-left: 2px; }
+
+    /* daisyUI-btn akzente fuer our buttons */
+    .btn { cursor: pointer; text-align: center; }
+
     div[data-testid="stImage"] img {{ border-radius: 10px; border: 1.5px solid var(--ink); }}
 </style>
 """, unsafe_allow_html=True)
