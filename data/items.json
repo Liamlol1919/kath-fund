@@ -1,0 +1,2082 @@
+[
+  {
+    "id": 1018,
+    "titel": "Lunchbox gelb",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-23",
+    "datum_ablauf": "2026-11-21",
+    "status": "Offen",
+    "beschreibung": "Lunchbox, türkis, wurde am 23.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "IMG_20260907_144530.jpg",
+    "tags": [
+      "Lunchbox",
+      "grau"
+    ]
+  },
+  {
+    "id": 1090,
+    "titel": "Mundschutz weiß (Apple)",
+    "kategorie": "Sonstiges",
+    "fundort": "Pausenhof",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-01",
+    "datum_ablauf": "2026-11-30",
+    "status": "Offen",
+    "beschreibung": "Mundschutz, gelb, wurde am 01.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "GetImage.jpeg",
+    "tags": [
+      "Mundschutz",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1069,
+    "titel": "Trinkbecher schwarz",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-07-31",
+    "datum_ablauf": "2026-10-29",
+    "status": "Beansprucht",
+    "beschreibung": "Trinkbecher, pink, wurde am 31.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_trinkflaschen_1.jpg",
+    "tags": [
+      "Trinkbecher",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1094,
+    "titel": "Laptop-Tasche türkis (Samsung)",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-16",
+    "datum_ablauf": "2026-12-15",
+    "status": "Beansprucht",
+    "beschreibung": "Laptop-Tasche, blau, wurde am 16.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Laptop-Tasche",
+      "rot"
+    ]
+  },
+  {
+    "id": 1021,
+    "titel": "Mäppchen schwarz (Apple)",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Bibliothek",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-07-27",
+    "datum_ablauf": "2026-10-25",
+    "status": "Offen",
+    "beschreibung": "Mäppchen, grün, wurde am 27.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schulmaterial_1.jpg",
+    "tags": [
+      "Mäppchen",
+      "lila"
+    ]
+  },
+  {
+    "id": 1009,
+    "titel": "Schlüsselbund rot",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-31",
+    "datum_ablauf": "2026-11-29",
+    "status": "Offen",
+    "beschreibung": "Schlüsselbund, pink, wurde am 31.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Schlüsselbund",
+      "blau"
+    ]
+  },
+  {
+    "id": 1046,
+    "titel": "Federmappe blau",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Sporthalle",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-05",
+    "datum_ablauf": "2026-12-04",
+    "status": "Offen",
+    "beschreibung": "Federmappe, blau, wurde am 05.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schulmaterial_0.jpg",
+    "tags": [
+      "Federmappe",
+      "lila"
+    ]
+  },
+  {
+    "id": 1035,
+    "titel": "Armbanduhr rot",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-02",
+    "datum_ablauf": "2026-12-01",
+    "status": "Offen",
+    "beschreibung": "Armbanduhr, schwarz, wurde am 02.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Armbanduhr",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1072,
+    "titel": "Ballettschläppchen schwarz",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Sporthalle",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-01",
+    "datum_ablauf": "2026-11-30",
+    "status": "Offen",
+    "beschreibung": "Ballettschläppchen, pink, wurde am 01.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_1.jpg",
+    "tags": [
+      "Ballettschläppchen",
+      "grau"
+    ]
+  },
+  {
+    "id": 1028,
+    "titel": "Edelstahlflasche grün (unbekannt)",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-13",
+    "datum_ablauf": "2026-12-12",
+    "status": "Offen",
+    "beschreibung": "Edelstahlflasche, weiß, wurde am 13.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Edelstahlflasche",
+      "grün"
+    ]
+  },
+  {
+    "id": 1115,
+    "titel": "Lippenbalsam creme",
+    "kategorie": "Sonstiges",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-19",
+    "datum_ablauf": "2026-12-18",
+    "status": "Offen",
+    "beschreibung": "Lippenbalsam, Farbe creme, am 19.09.2026 gefunden.",
+    "image_file": "demo_sonstiges_1.jpg",
+    "tags": [
+      "Lippenbalsam",
+      "creme"
+    ]
+  },
+  {
+    "id": 1044,
+    "titel": "Turnschuh weiß (unbekannt)",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Bibliothek",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-30",
+    "datum_ablauf": "2026-11-28",
+    "status": "Offen",
+    "beschreibung": "Turnschuh, schwarz, wurde am 30.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Turnschuh",
+      "grün"
+    ]
+  },
+  {
+    "id": 1022,
+    "titel": "Brotdose weiß",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Sporthalle",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-04",
+    "datum_ablauf": "2026-11-02",
+    "status": "Beansprucht",
+    "beschreibung": "Brotdose, türkis, wurde am 04.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_trinkflaschen_1.jpg",
+    "tags": [
+      "Brotdose",
+      "rot"
+    ]
+  },
+  {
+    "id": 1007,
+    "titel": "Trinkflasche grau (Fjällräven)",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Pausenhof",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-05",
+    "datum_ablauf": "2026-11-03",
+    "status": "Abgeholt",
+    "beschreibung": "Trinkflasche, gelb, wurde am 05.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Trinkflasche",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1075,
+    "titel": "Schienbeinschoner grau",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-29",
+    "datum_ablauf": "2026-11-27",
+    "status": "Beansprucht",
+    "beschreibung": "Schienbeinschoner, türkis, wurde am 29.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_2.jpg",
+    "tags": [
+      "Schienbeinschoner",
+      "pink"
+    ]
+  },
+  {
+    "id": 1030,
+    "titel": "Aufsichtsplakat grün",
+    "kategorie": "Sonstiges",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-07-26",
+    "datum_ablauf": "2026-10-24",
+    "status": "Beansprucht",
+    "beschreibung": "Aufsichtsplakat, schwarz, wurde am 26.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Aufsichtsplakat",
+      "gelb"
+    ]
+  },
+  {
+    "id": 1066,
+    "titel": "Ohrhörer grau",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Pausenhof",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-11",
+    "datum_ablauf": "2026-12-10",
+    "status": "Offen",
+    "beschreibung": "Ohrhörer, blau, wurde am 11.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_elektronik_1.jpg",
+    "tags": [
+      "Ohrhörer",
+      "lila"
+    ]
+  },
+  {
+    "id": 1023,
+    "titel": "Portemonnaie lila",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-08",
+    "datum_ablauf": "2026-12-07",
+    "status": "Beansprucht",
+    "beschreibung": "Portemonnaie, pink, wurde am 08.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Portemonnaie",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1104,
+    "titel": "Ring pink",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-06",
+    "datum_ablauf": "2026-12-05",
+    "status": "Offen",
+    "beschreibung": "Ring, rot, wurde am 06.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schlüssel_2.jpg",
+    "tags": [
+      "Ring",
+      "blau"
+    ]
+  },
+  {
+    "id": 1108,
+    "titel": "Brotdose beige",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-17",
+    "datum_ablauf": "2026-12-16",
+    "status": "Offen",
+    "beschreibung": "Brotdose, Farbe beige, am 17.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Brotdose",
+      "beige"
+    ]
+  },
+  {
+    "id": 1064,
+    "titel": "Sporttop blau",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-05",
+    "datum_ablauf": "2026-11-03",
+    "status": "Offen",
+    "beschreibung": "Sporttop, blau, wurde am 05.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_2.jpg",
+    "tags": [
+      "Sporttop",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1039,
+    "titel": "Lippenbalsam schwarz (Samsung)",
+    "kategorie": "Sonstiges",
+    "fundort": "Bibliothek",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-07-30",
+    "datum_ablauf": "2026-10-28",
+    "status": "Offen",
+    "beschreibung": "Lippenbalsam, pink, wurde am 30.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Lippenbalsam",
+      "rot"
+    ]
+  },
+  {
+    "id": 1085,
+    "titel": "Schlüsselanhänger blau",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-07-24",
+    "datum_ablauf": "2026-10-22",
+    "status": "Beansprucht",
+    "beschreibung": "Schlüsselanhänger, blau, wurde am 24.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schlüssel_2.jpg",
+    "tags": [
+      "Schlüsselanhänger",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1042,
+    "titel": "Lineal grün",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-30",
+    "datum_ablauf": "2026-11-28",
+    "status": "Offen",
+    "beschreibung": "Lineal, rot, wurde am 30.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Lineal",
+      "rot"
+    ]
+  },
+  {
+    "id": 1032,
+    "titel": "Sportssocken türkis (Apple)",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-18",
+    "datum_ablauf": "2026-12-17",
+    "status": "Abgeholt",
+    "beschreibung": "Sportssocken, türkis, wurde am 18.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_kleidung_2.jpg",
+    "tags": [
+      "Sportssocken",
+      "rot"
+    ]
+  },
+  {
+    "id": 1107,
+    "titel": "Zeichenmappe oliv",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-16",
+    "datum_ablauf": "2026-12-15",
+    "status": "Offen",
+    "beschreibung": "Zeichenmappe, Farbe oliv, am 16.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Zeichenmappe",
+      "oliv"
+    ]
+  },
+  {
+    "id": 1089,
+    "titel": "Handschuhe lila (Fjällräven)",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-22",
+    "datum_ablauf": "2026-11-20",
+    "status": "Offen",
+    "beschreibung": "Handschuhe, lila, wurde am 22.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_kleidung_0.jpg",
+    "tags": [
+      "Handschuhe",
+      "gelb"
+    ]
+  },
+  {
+    "id": 1099,
+    "titel": "Schienbeinschoner gelb (unbekannt)",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Musiksaal",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-07",
+    "datum_ablauf": "2026-11-05",
+    "status": "Offen",
+    "beschreibung": "Schienbeinschoner, weiß, wurde am 07.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Schienbeinschoner",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1038,
+    "titel": "Brotdose türkis (Faber-Castell)",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-14",
+    "datum_ablauf": "2026-11-12",
+    "status": "Offen",
+    "beschreibung": "Brotdose, grau, wurde am 14.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_trinkflaschen_2.jpg",
+    "tags": [
+      "Brotdose",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1054,
+    "titel": "Weste gelb (Nike)",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Pausenhof",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-07-26",
+    "datum_ablauf": "2026-10-24",
+    "status": "Offen",
+    "beschreibung": "Weste, rot, wurde am 26.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Weste",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1119,
+    "titel": "Federmappe creme",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Unbekannt",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-17",
+    "datum_ablauf": "2026-12-16",
+    "status": "Offen",
+    "beschreibung": "Federmappe, Farbe creme, am 17.09.2026 gefunden.",
+    "image_file": "demo_schulmaterial_2.jpg",
+    "tags": [
+      "Federmappe",
+      "creme"
+    ]
+  },
+  {
+    "id": 1129,
+    "titel": "Zeichenmappe beige",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Musiksaal",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-18",
+    "datum_ablauf": "2026-12-17",
+    "status": "Offen",
+    "beschreibung": "Zeichenmappe, Farbe beige, am 18.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Zeichenmappe",
+      "beige"
+    ]
+  },
+  {
+    "id": 1116,
+    "titel": "USB-C-Kabel anthrazit",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-17",
+    "datum_ablauf": "2026-12-16",
+    "status": "Offen",
+    "beschreibung": "USB-C-Kabel, Farbe anthrazit, am 17.09.2026 gefunden.",
+    "image_file": "demo_elektronik_1.jpg",
+    "tags": [
+      "USB-C-Kabel",
+      "anthrazit"
+    ]
+  },
+  {
+    "id": 1103,
+    "titel": "Trikot blau",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Bibliothek",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-08",
+    "datum_ablauf": "2026-11-06",
+    "status": "Offen",
+    "beschreibung": "Trikot, pink, wurde am 08.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Trikot",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1016,
+    "titel": "Laptop-Tasche rot (EMU)",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-18",
+    "datum_ablauf": "2026-11-16",
+    "status": "Abgeholt",
+    "beschreibung": "Laptop-Tasche, gelb, wurde am 18.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_rucksäcke_1.jpg",
+    "tags": [
+      "Laptop-Tasche",
+      "pink"
+    ]
+  },
+  {
+    "id": 1033,
+    "titel": "Gürtel blau",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Pausenhof",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-17",
+    "datum_ablauf": "2026-12-16",
+    "status": "Beansprucht",
+    "beschreibung": "Gürtel, blau, wurde am 17.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Gürtel",
+      "lila"
+    ]
+  },
+  {
+    "id": 1055,
+    "titel": "Regenschirm türkis (Adidas)",
+    "kategorie": "Sonstiges",
+    "fundort": "Sporthalle",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-23",
+    "datum_ablauf": "2026-11-21",
+    "status": "Abgeholt",
+    "beschreibung": "Regenschirm, türkis, wurde am 23.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sonstiges_2.jpg",
+    "tags": [
+      "Regenschirm",
+      "lila"
+    ]
+  },
+  {
+    "id": 1029,
+    "titel": "Isolierflasche türkis (EMU)",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-07-30",
+    "datum_ablauf": "2026-10-28",
+    "status": "Offen",
+    "beschreibung": "Isolierflasche, rot, wurde am 30.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Isolierflasche",
+      "gelb"
+    ]
+  },
+  {
+    "id": 1118,
+    "titel": "Zeichenmappe magenta",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-18",
+    "datum_ablauf": "2026-12-17",
+    "status": "Offen",
+    "beschreibung": "Zeichenmappe, Farbe magenta, am 18.09.2026 gefunden.",
+    "image_file": "demo_schulmaterial_2.jpg",
+    "tags": [
+      "Zeichenmappe",
+      "magenta"
+    ]
+  },
+  {
+    "id": 1086,
+    "titel": "USB-Stick grau",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-17",
+    "datum_ablauf": "2026-12-16",
+    "status": "Offen",
+    "beschreibung": "USB-Stick, lila, wurde am 17.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "USB-Stick",
+      "lila"
+    ]
+  },
+  {
+    "id": 1037,
+    "titel": "Beutel türkis",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-13",
+    "datum_ablauf": "2026-11-11",
+    "status": "Offen",
+    "beschreibung": "Beutel, rot, wurde am 13.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_rucksäcke_2.jpg",
+    "tags": [
+      "Beutel",
+      "grau"
+    ]
+  },
+  {
+    "id": 1127,
+    "titel": "Turnbeutel salbei",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-21",
+    "datum_ablauf": "2026-12-20",
+    "status": "Offen",
+    "beschreibung": "Turnbeutel, Farbe salbei, am 21.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Turnbeutel",
+      "salbei"
+    ]
+  },
+  {
+    "id": 1014,
+    "titel": "Buntstift grau",
+    "kategorie": "Sonstiges",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-12",
+    "datum_ablauf": "2026-11-10",
+    "status": "Offen",
+    "beschreibung": "Buntstift, grün, wurde am 12.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sonstiges_0.jpg",
+    "tags": [
+      "Buntstift",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1025,
+    "titel": "Kopfhörer schwarz",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-17",
+    "datum_ablauf": "2026-12-16",
+    "status": "Beansprucht",
+    "beschreibung": "Kopfhörer, grün, wurde am 17.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Kopfhörer",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1068,
+    "titel": "Kaffeebecher lila",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-02",
+    "datum_ablauf": "2026-10-31",
+    "status": "Abgeholt",
+    "beschreibung": "Kaffeebecher, gelb, wurde am 02.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_trinkflaschen_1.jpg",
+    "tags": [
+      "Kaffeebecher",
+      "pink"
+    ]
+  },
+  {
+    "id": 1058,
+    "titel": "Geldbeutel grau (EMU)",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Sporthalle",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-16",
+    "datum_ablauf": "2026-12-15",
+    "status": "Offen",
+    "beschreibung": "Geldbeutel, gelb, wurde am 16.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Geldbeutel",
+      "rot"
+    ]
+  },
+  {
+    "id": 1047,
+    "titel": "Ballettschläppchen pink",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Pausenhof",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-20",
+    "datum_ablauf": "2026-11-18",
+    "status": "Abgeholt",
+    "beschreibung": "Ballettschläppchen, grün, wurde am 20.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_1.jpg",
+    "tags": [
+      "Ballettschläppchen",
+      "grau"
+    ]
+  },
+  {
+    "id": 1020,
+    "titel": "Kaffeebecher türkis",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-12",
+    "datum_ablauf": "2026-12-11",
+    "status": "Abgeholt",
+    "beschreibung": "Kaffeebecher, türkis, wurde am 12.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Kaffeebecher",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1048,
+    "titel": "Cap schwarz",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-01",
+    "datum_ablauf": "2026-10-30",
+    "status": "Beansprucht",
+    "beschreibung": "Cap, blau, wurde am 01.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_kleidung_1.jpg",
+    "tags": [
+      "Cap",
+      "pink"
+    ]
+  },
+  {
+    "id": 1052,
+    "titel": "Haargummi blau (Stacky)",
+    "kategorie": "Sonstiges",
+    "fundort": "Pausenhof",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-31",
+    "datum_ablauf": "2026-11-29",
+    "status": "Offen",
+    "beschreibung": "Haargummi, grün, wurde am 31.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Haargummi",
+      "grün"
+    ]
+  },
+  {
+    "id": 1013,
+    "titel": "Lineal grau",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Pausenhof",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-09",
+    "datum_ablauf": "2026-11-07",
+    "status": "Abgeholt",
+    "beschreibung": "Lineal, grün, wurde am 09.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schulmaterial_2.jpg",
+    "tags": [
+      "Lineal",
+      "rot"
+    ]
+  },
+  {
+    "id": 1106,
+    "titel": "Strumpfhose grau",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Pausenhof",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-11",
+    "datum_ablauf": "2026-12-10",
+    "status": "Offen",
+    "beschreibung": "Strumpfhose, lila, wurde am 11.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Strumpfhose",
+      "grau"
+    ]
+  },
+  {
+    "id": 1043,
+    "titel": "Turnschuh rot",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-31",
+    "datum_ablauf": "2026-11-29",
+    "status": "Offen",
+    "beschreibung": "Turnschuh, rot, wurde am 31.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_1.jpg",
+    "tags": [
+      "Turnschuh",
+      "blau"
+    ]
+  },
+  {
+    "id": 1095,
+    "titel": "Lippenbalsam türkis",
+    "kategorie": "Sonstiges",
+    "fundort": "Unbekannt",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-26",
+    "datum_ablauf": "2026-11-24",
+    "status": "Offen",
+    "beschreibung": "Lippenbalsam, weiß, wurde am 26.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Lippenbalsam",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1100,
+    "titel": "Sporttasche blau",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Pausenhof",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-24",
+    "datum_ablauf": "2026-11-22",
+    "status": "Offen",
+    "beschreibung": "Sporttasche, rot, wurde am 24.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_rucksäcke_2.jpg",
+    "tags": [
+      "Sporttasche",
+      "gelb"
+    ]
+  },
+  {
+    "id": 1079,
+    "titel": "Beutel blau",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-16",
+    "datum_ablauf": "2026-11-14",
+    "status": "Beansprucht",
+    "beschreibung": "Beutel, weiß, wurde am 16.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Beutel",
+      "pink"
+    ]
+  },
+  {
+    "id": 1065,
+    "titel": "Pullover grün",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Sporthalle",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-13",
+    "datum_ablauf": "2026-11-11",
+    "status": "Offen",
+    "beschreibung": "Pullover, weiß, wurde am 13.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_kleidung_1.jpg",
+    "tags": [
+      "Pullover",
+      "blau"
+    ]
+  },
+  {
+    "id": 1017,
+    "titel": "USB-Stick türkis",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-04",
+    "datum_ablauf": "2026-11-02",
+    "status": "Offen",
+    "beschreibung": "USB-Stick, rot, wurde am 04.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "USB-Stick",
+      "gelb"
+    ]
+  },
+  {
+    "id": 1074,
+    "titel": "Spiegel weiß",
+    "kategorie": "Sonstiges",
+    "fundort": "Unbekannt",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-21",
+    "datum_ablauf": "2026-11-19",
+    "status": "Offen",
+    "beschreibung": "Spiegel, grau, wurde am 21.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sonstiges_0.jpg",
+    "tags": [
+      "Spiegel",
+      "grün"
+    ]
+  },
+  {
+    "id": 1049,
+    "titel": "Mathe-Heft grau",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-10",
+    "datum_ablauf": "2026-11-08",
+    "status": "Beansprucht",
+    "beschreibung": "Mathe-Heft, grau, wurde am 10.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Mathe-Heft",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1078,
+    "titel": "Taschenbuch grau (EMU)",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Bibliothek",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-13",
+    "datum_ablauf": "2026-12-12",
+    "status": "Offen",
+    "beschreibung": "Taschenbuch, türkis, wurde am 13.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schulmaterial_1.jpg",
+    "tags": [
+      "Taschenbuch",
+      "grau"
+    ]
+  },
+  {
+    "id": 1093,
+    "titel": "Portemonnaie rot",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-24",
+    "datum_ablauf": "2026-11-22",
+    "status": "Offen",
+    "beschreibung": "Portemonnaie, lila, wurde am 24.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Portemonnaie",
+      "grün"
+    ]
+  },
+  {
+    "id": 1091,
+    "titel": "Armbanduhr türkis (Adidas)",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-01",
+    "datum_ablauf": "2026-11-30",
+    "status": "Offen",
+    "beschreibung": "Armbanduhr, gelb, wurde am 01.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schlüssel_2.jpg",
+    "tags": [
+      "Armbanduhr",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1096,
+    "titel": "Umhängetasche grün",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Sporthalle",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-20",
+    "datum_ablauf": "2026-11-18",
+    "status": "Offen",
+    "beschreibung": "Umhängetasche, gelb, wurde am 20.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Umhängetasche",
+      "pink"
+    ]
+  },
+  {
+    "id": 1050,
+    "titel": "Geldbörse gelb",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Sporthalle",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-28",
+    "datum_ablauf": "2026-11-26",
+    "status": "Beansprucht",
+    "beschreibung": "Geldbörse, türkis, wurde am 28.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_rucksäcke_1.jpg",
+    "tags": [
+      "Geldbörse",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1109,
+    "titel": "Brotdose oliv",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-21",
+    "datum_ablauf": "2026-12-20",
+    "status": "Offen",
+    "beschreibung": "Brotdose, Farbe oliv, am 21.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Brotdose",
+      "oliv"
+    ]
+  },
+  {
+    "id": 1059,
+    "titel": "Kopfhörer gelb",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Unbekannt",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-18",
+    "datum_ablauf": "2026-11-16",
+    "status": "Offen",
+    "beschreibung": "Kopfhörer, grün, wurde am 18.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_elektronik_0.jpg",
+    "tags": [
+      "Kopfhörer",
+      "gelb"
+    ]
+  },
+  {
+    "id": 1051,
+    "titel": "Ausweis grün",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-15",
+    "datum_ablauf": "2026-11-13",
+    "status": "Beansprucht",
+    "beschreibung": "Ausweis, weiß, wurde am 15.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Ausweis",
+      "grün"
+    ]
+  },
+  {
+    "id": 1102,
+    "titel": "Ballettschläppchen weiß",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Pausenhof",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-19",
+    "datum_ablauf": "2026-12-18",
+    "status": "Offen",
+    "beschreibung": "Ballettschläppchen, grün, wurde am 19.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_1.jpg",
+    "tags": [
+      "Ballettschläppchen",
+      "blau"
+    ]
+  },
+  {
+    "id": 1071,
+    "titel": "Ring grün",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-16",
+    "datum_ablauf": "2026-12-15",
+    "status": "Offen",
+    "beschreibung": "Ring, weiß, wurde am 16.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Ring",
+      "lila"
+    ]
+  },
+  {
+    "id": 1060,
+    "titel": "Turnschuh lila",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-21",
+    "datum_ablauf": "2026-12-20",
+    "status": "Beansprucht",
+    "beschreibung": "Turnschuh, gelb, wurde am 21.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_2.jpg",
+    "tags": [
+      "Turnschuh",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1097,
+    "titel": "Schlüsselbund grau",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-07-30",
+    "datum_ablauf": "2026-10-28",
+    "status": "Beansprucht",
+    "beschreibung": "Schlüsselbund, türkis, wurde am 30.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Schlüsselbund",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1062,
+    "titel": "Rucksack gelb",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-10",
+    "datum_ablauf": "2026-11-08",
+    "status": "Beansprucht",
+    "beschreibung": "Rucksack, rot, wurde am 10.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_rucksäcke_2.jpg",
+    "tags": [
+      "Rucksack",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1122,
+    "titel": "Leggings creme",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Pausenhof",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Offen",
+    "beschreibung": "Leggings, Farbe creme, am 20.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Leggings",
+      "creme"
+    ]
+  },
+  {
+    "id": 1034,
+    "titel": "Ladekabel lila (Stacky)",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-16",
+    "datum_ablauf": "2026-11-14",
+    "status": "Offen",
+    "beschreibung": "Ladekabel, pink, wurde am 16.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_elektronik_2.jpg",
+    "tags": [
+      "Ladekabel",
+      "grün"
+    ]
+  },
+  {
+    "id": 1070,
+    "titel": "Umhängetasche rot",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-11",
+    "datum_ablauf": "2026-11-09",
+    "status": "Beansprucht",
+    "beschreibung": "Umhängetasche, gelb, wurde am 11.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Umhängetasche",
+      "lila"
+    ]
+  },
+  {
+    "id": 1130,
+    "titel": "Trainingsjacke navy",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Musiksaal",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-18",
+    "datum_ablauf": "2026-12-17",
+    "status": "Offen",
+    "beschreibung": "Trainingsjacke, Farbe navy, am 18.09.2026 gefunden.",
+    "image_file": "demo_sportbekleidung_0.jpg",
+    "tags": [
+      "Trainingsjacke",
+      "navy"
+    ]
+  },
+  {
+    "id": 1011,
+    "titel": "Trikot türkis (Stacky)",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-07-27",
+    "datum_ablauf": "2026-10-25",
+    "status": "Offen",
+    "beschreibung": "Trikot, schwarz, wurde am 27.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Trikot",
+      "grün"
+    ]
+  },
+  {
+    "id": 1019,
+    "titel": "Mathe-Heft grau",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-23",
+    "datum_ablauf": "2026-11-21",
+    "status": "Abgeholt",
+    "beschreibung": "Mathe-Heft, rot, wurde am 23.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schulmaterial_0.jpg",
+    "tags": [
+      "Mathe-Heft",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1053,
+    "titel": "Rucksack schwarz (unbekannt)",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Pausenhof",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-13",
+    "datum_ablauf": "2026-11-11",
+    "status": "Beansprucht",
+    "beschreibung": "Rucksack, lila, wurde am 13.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Rucksack",
+      "grün"
+    ]
+  },
+  {
+    "id": 1024,
+    "titel": "Mundschutz grün (Apple)",
+    "kategorie": "Sonstiges",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Offen",
+    "beschreibung": "Mundschutz, blau, wurde am 20.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sonstiges_2.jpg",
+    "tags": [
+      "Mundschutz",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1063,
+    "titel": "Rucksack grau",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-08",
+    "datum_ablauf": "2026-12-07",
+    "status": "Offen",
+    "beschreibung": "Rucksack, gelb, wurde am 08.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Rucksack",
+      "grau"
+    ]
+  },
+  {
+    "id": 1080,
+    "titel": "Rucksack grau",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Pausenhof",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-22",
+    "datum_ablauf": "2026-11-20",
+    "status": "Beansprucht",
+    "beschreibung": "Rucksack, weiß, wurde am 22.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_rucksäcke_2.jpg",
+    "tags": [
+      "Rucksack",
+      "blau"
+    ]
+  },
+  {
+    "id": 1112,
+    "titel": "Stutzen navy",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Bibliothek",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-17",
+    "datum_ablauf": "2026-12-16",
+    "status": "Offen",
+    "beschreibung": "Stutzen, Farbe navy, am 17.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Stutzen",
+      "navy"
+    ]
+  },
+  {
+    "id": 1061,
+    "titel": "Ohrhörer grün (unbekannt)",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Beansprucht",
+    "beschreibung": "Ohrhörer, rot, wurde am 20.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_elektronik_1.jpg",
+    "tags": [
+      "Ohrhörer",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1105,
+    "titel": "Schienbeinschoner weiß",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-12",
+    "datum_ablauf": "2026-12-11",
+    "status": "Offen",
+    "beschreibung": "Schienbeinschoner, weiß, wurde am 12.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Schienbeinschoner",
+      "grau"
+    ]
+  },
+  {
+    "id": 1083,
+    "titel": "Sportssocken blau",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-08",
+    "datum_ablauf": "2026-12-07",
+    "status": "Offen",
+    "beschreibung": "Sportssocken, rot, wurde am 08.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_kleidung_1.jpg",
+    "tags": [
+      "Sportssocken",
+      "grün"
+    ]
+  },
+  {
+    "id": 1113,
+    "titel": "Smoothie-Becher salbei",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Pausenhof",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-19",
+    "datum_ablauf": "2026-12-18",
+    "status": "Offen",
+    "beschreibung": "Smoothie-Becher, Farbe salbei, am 19.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Smoothie-Becher",
+      "salbei"
+    ]
+  },
+  {
+    "id": 1041,
+    "titel": "T-Shirt lila",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Sporthalle",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-25",
+    "datum_ablauf": "2026-11-23",
+    "status": "Offen",
+    "beschreibung": "T-Shirt, pink, wurde am 25.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_kleidung_1.jpg",
+    "tags": [
+      "T-Shirt",
+      "schwarz"
+    ]
+  },
+  {
+    "id": 1010,
+    "titel": "Lunchbox blau",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-30",
+    "datum_ablauf": "2026-11-28",
+    "status": "Beansprucht",
+    "beschreibung": "Lunchbox, türkis, wurde am 30.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Lunchbox",
+      "blau"
+    ]
+  },
+  {
+    "id": 1045,
+    "titel": "Ballettschläppchen grau",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Bibliothek",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-03",
+    "datum_ablauf": "2026-11-01",
+    "status": "Abgeholt",
+    "beschreibung": "Ballettschläppchen, gelb, wurde am 03.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_2.jpg",
+    "tags": [
+      "Ballettschläppchen",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1012,
+    "titel": "Fahrkarten-Abo grün",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-08-28",
+    "datum_ablauf": "2026-11-26",
+    "status": "Offen",
+    "beschreibung": "Fahrkarten-Abo, rot, wurde am 28.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Fahrkarten-Abo",
+      "pink"
+    ]
+  },
+  {
+    "id": 1082,
+    "titel": "Schienbeinschoner türkis",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-07-25",
+    "datum_ablauf": "2026-10-23",
+    "status": "Abgeholt",
+    "beschreibung": "Schienbeinschoner, gelb, wurde am 25.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sportbekleidung_1.jpg",
+    "tags": [
+      "Schienbeinschoner",
+      "grau"
+    ]
+  },
+  {
+    "id": 1027,
+    "titel": "Atlas gelb",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-06",
+    "datum_ablauf": "2026-11-04",
+    "status": "Offen",
+    "beschreibung": "Atlas, gelb, wurde am 06.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Atlas",
+      "pink"
+    ]
+  },
+  {
+    "id": 1128,
+    "titel": "Ohrringe beige",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Offen",
+    "beschreibung": "Ohrringe, Farbe beige, am 20.09.2026 gefunden.",
+    "image_file": "demo_schlüssel_2.jpg",
+    "tags": [
+      "Ohrringe",
+      "beige"
+    ]
+  },
+  {
+    "id": 1092,
+    "titel": "Gürtel weiß",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-09",
+    "datum_ablauf": "2026-12-08",
+    "status": "Beansprucht",
+    "beschreibung": "Gürtel, schwarz, wurde am 09.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Gürtel",
+      "grün"
+    ]
+  },
+  {
+    "id": 1126,
+    "titel": "Atlas salbei",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Pausenhof",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Offen",
+    "beschreibung": "Atlas, Farbe salbei, am 20.09.2026 gefunden.",
+    "image_file": "demo_schulmaterial_2.jpg",
+    "tags": [
+      "Atlas",
+      "salbei"
+    ]
+  },
+  {
+    "id": 1134,
+    "titel": "Etui-Tasche anthrazit",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-19",
+    "datum_ablauf": "2026-12-18",
+    "status": "Offen",
+    "beschreibung": "Etui-Tasche, Farbe anthrazit, am 19.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Etui-Tasche",
+      "anthrazit"
+    ]
+  },
+  {
+    "id": 1056,
+    "titel": "Mäppchen lila",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Musiksaal",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-07-26",
+    "datum_ablauf": "2026-10-24",
+    "status": "Offen",
+    "beschreibung": "Mäppchen, weiß, wurde am 26.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schulmaterial_1.jpg",
+    "tags": [
+      "Mäppchen",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1073,
+    "titel": "Taschenrechner lila",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-04",
+    "datum_ablauf": "2026-12-03",
+    "status": "Offen",
+    "beschreibung": "Taschenrechner, grün, wurde am 04.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Taschenrechner",
+      "gelb"
+    ]
+  },
+  {
+    "id": 1110,
+    "titel": "Trikot navy",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Offen",
+    "beschreibung": "Trikot, Farbe navy, am 20.09.2026 gefunden.",
+    "image_file": "demo_sportbekleidung_2.jpg",
+    "tags": [
+      "Trikot",
+      "navy"
+    ]
+  },
+  {
+    "id": 1111,
+    "titel": "Beanie beige",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Sporthalle",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-17",
+    "datum_ablauf": "2026-12-16",
+    "status": "Offen",
+    "beschreibung": "Beanie, Farbe beige, am 17.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Beanie",
+      "beige"
+    ]
+  },
+  {
+    "id": 1120,
+    "titel": "Trinkflasche anthrazit",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Pausenhof",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-18",
+    "datum_ablauf": "2026-12-17",
+    "status": "Offen",
+    "beschreibung": "Trinkflasche, Farbe anthrazit, am 18.09.2026 gefunden.",
+    "image_file": "demo_trinkflaschen_1.jpg",
+    "tags": [
+      "Trinkflasche",
+      "anthrazit"
+    ]
+  },
+  {
+    "id": 1026,
+    "titel": "Beutel grün",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-01",
+    "datum_ablauf": "2026-10-30",
+    "status": "Offen",
+    "beschreibung": "Beutel, blau, wurde am 01.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Beutel",
+      "gelb"
+    ]
+  },
+  {
+    "id": 1088,
+    "titel": "Mundschutz lila (Samsung)",
+    "kategorie": "Sonstiges",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-05",
+    "datum_ablauf": "2026-11-03",
+    "status": "Offen",
+    "beschreibung": "Mundschutz, blau, wurde am 05.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_sonstiges_0.jpg",
+    "tags": [
+      "Mundschutz",
+      "grün"
+    ]
+  },
+  {
+    "id": 1057,
+    "titel": "Geldbeutel grau",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-19",
+    "datum_ablauf": "2026-11-17",
+    "status": "Offen",
+    "beschreibung": "Geldbeutel, weiß, wurde am 19.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Geldbeutel",
+      "blau"
+    ]
+  },
+  {
+    "id": 1117,
+    "titel": "Notizbuch navy",
+    "kategorie": "Sonstiges",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-09-21",
+    "datum_ablauf": "2026-12-20",
+    "status": "Offen",
+    "beschreibung": "Notizbuch, Farbe navy, am 21.09.2026 gefunden.",
+    "image_file": "demo_sonstiges_2.jpg",
+    "tags": [
+      "Notizbuch",
+      "navy"
+    ]
+  },
+  {
+    "id": 1121,
+    "titel": "Brille anthrazit",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-16",
+    "datum_ablauf": "2026-12-15",
+    "status": "Offen",
+    "beschreibung": "Brille, Farbe anthrazit, am 16.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Brille",
+      "anthrazit"
+    ]
+  },
+  {
+    "id": 1133,
+    "titel": "Workbook Latein navy",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-15",
+    "datum_ablauf": "2026-12-14",
+    "status": "Offen",
+    "beschreibung": "Workbook Latein, Farbe navy, am 15.09.2026 gefunden.",
+    "image_file": "demo_schulmaterial_0.jpg",
+    "tags": [
+      "Workbook",
+      "navy"
+    ]
+  },
+  {
+    "id": 1076,
+    "titel": "Mäppchen grau (Lamy)",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-14",
+    "datum_ablauf": "2026-12-13",
+    "status": "Offen",
+    "beschreibung": "Mäppchen, türkis, wurde am 14.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Mäppchen",
+      "rot"
+    ]
+  },
+  {
+    "id": 1125,
+    "titel": "Fahrradschlüssel oliv",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Bibliothek",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-15",
+    "datum_ablauf": "2026-12-14",
+    "status": "Offen",
+    "beschreibung": "Fahrradschlüssel, Farbe oliv, am 15.09.2026 gefunden.",
+    "image_file": "demo_schlüssel_2.jpg",
+    "tags": [
+      "Fahrradschlüssel",
+      "oliv"
+    ]
+  },
+  {
+    "id": 1098,
+    "titel": "Sportbeutel türkis",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-28",
+    "datum_ablauf": "2026-11-26",
+    "status": "Offen",
+    "beschreibung": "Sportbeutel, grün, wurde am 28.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Sportbeutel",
+      "lila"
+    ]
+  },
+  {
+    "id": 1031,
+    "titel": "Schlüsselanhänger grau",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-06",
+    "datum_ablauf": "2026-11-04",
+    "status": "Offen",
+    "beschreibung": "Schlüsselanhänger, grau, wurde am 06.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schlüssel_0.jpg",
+    "tags": [
+      "Schlüsselanhänger",
+      "grün"
+    ]
+  },
+  {
+    "id": 1036,
+    "titel": "Brotdose türkis (Faber-Castell)",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-13",
+    "datum_ablauf": "2026-12-12",
+    "status": "Offen",
+    "beschreibung": "Brotdose, pink, wurde am 13.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Brotdose",
+      "grau"
+    ]
+  },
+  {
+    "id": 1077,
+    "titel": "Maus weiß (Stacky)",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Bibliothek",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-04",
+    "datum_ablauf": "2026-11-02",
+    "status": "Offen",
+    "beschreibung": "Maus, grau, wurde am 04.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_elektronik_1.jpg",
+    "tags": [
+      "Maus",
+      "grün"
+    ]
+  },
+  {
+    "id": 1135,
+    "titel": "Trinkflasche magenta",
+    "kategorie": "Trinkflaschen & Brotdosen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-18",
+    "datum_ablauf": "2026-12-17",
+    "status": "Offen",
+    "beschreibung": "Trinkflasche, Farbe magenta, am 18.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Trinkflasche",
+      "magenta"
+    ]
+  },
+  {
+    "id": 1131,
+    "titel": "USB-C-Kabel salbei",
+    "kategorie": "Elektronik & Kabel",
+    "fundort": "Sporthalle",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-18",
+    "datum_ablauf": "2026-12-17",
+    "status": "Offen",
+    "beschreibung": "USB-C-Kabel, Farbe salbei, am 18.09.2026 gefunden.",
+    "image_file": "demo_elektronik_1.jpg",
+    "tags": [
+      "USB-C-Kabel",
+      "salbei"
+    ]
+  },
+  {
+    "id": 1114,
+    "titel": "Regenhose salbei",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-18",
+    "datum_ablauf": "2026-12-17",
+    "status": "Offen",
+    "beschreibung": "Regenhose, Farbe salbei, am 18.09.2026 gefunden.",
+    "image_file": null,
+    "tags": [
+      "Regenhose",
+      "salbei"
+    ]
+  },
+  {
+    "id": 1123,
+    "titel": "Beanie anthrazit",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Offen",
+    "beschreibung": "Beanie, Farbe anthrazit, am 20.09.2026 gefunden.",
+    "image_file": "demo_kleidung_2.jpg",
+    "tags": [
+      "Beanie",
+      "anthrazit"
+    ]
+  },
+  {
+    "id": 1008,
+    "titel": "Mütze grün (Stacky)",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Mensa / Cafeteria",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Offen",
+    "beschreibung": "Mütze, weiß, wurde am 20.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Mütze",
+      "lila"
+    ]
+  },
+  {
+    "id": 1132,
+    "titel": "Workbook Latein navy",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Sporthalle",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-09-21",
+    "datum_ablauf": "2026-12-20",
+    "status": "Offen",
+    "beschreibung": "Workbook Latein, Farbe navy, am 21.09.2026 gefunden.",
+    "image_file": "demo_schulmaterial_1.jpg",
+    "tags": [
+      "Workbook",
+      "navy"
+    ]
+  },
+  {
+    "id": 1015,
+    "titel": "Atlas grau (Stacky)",
+    "kategorie": "Schulmaterial & Bücher",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-07-27",
+    "datum_ablauf": "2026-10-25",
+    "status": "Beansprucht",
+    "beschreibung": "Atlas, gelb, wurde am 27.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Atlas",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1081,
+    "titel": "Schal rot",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Bibliothek",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-07-23",
+    "datum_ablauf": "2026-10-21",
+    "status": "Offen",
+    "beschreibung": "Schal, blau, wurde am 23.07.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_kleidung_1.jpg",
+    "tags": [
+      "Schal",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1087,
+    "titel": "Schlüsselanhänger blau",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-02",
+    "datum_ablauf": "2026-12-01",
+    "status": "Abgeholt",
+    "beschreibung": "Schlüsselanhänger, türkis, wurde am 02.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Schlüsselanhänger",
+      "weiß"
+    ]
+  },
+  {
+    "id": 1136,
+    "titel": "Schlüsselbund bordeaux",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-09-21",
+    "datum_ablauf": "2026-12-20",
+    "status": "Offen",
+    "beschreibung": "Schlüsselbund, Farbe bordeaux, am 21.09.2026 gefunden.",
+    "image_file": "demo_schlüssel_2.jpg",
+    "tags": [
+      "Schlüsselbund",
+      "bordeaux"
+    ]
+  },
+  {
+    "id": 1084,
+    "titel": "Turnbeutel rot (unbekannt)",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Unbekannt",
+    "abgabeort": "Sporthalle Regallager",
+    "datum_fund": "2026-08-08",
+    "datum_ablauf": "2026-11-06",
+    "status": "Offen",
+    "beschreibung": "Turnbeutel, grün, wurde am 08.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Turnbeutel",
+      "grau"
+    ]
+  },
+  {
+    "id": 1124,
+    "titel": "Trainingsjacke navy",
+    "kategorie": "Sportbekleidung",
+    "fundort": "Unbekannt",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-20",
+    "datum_ablauf": "2026-12-19",
+    "status": "Offen",
+    "beschreibung": "Trainingsjacke, Farbe navy, am 20.09.2026 gefunden.",
+    "image_file": "demo_sportbekleidung_2.jpg",
+    "tags": [
+      "Trainingsjacke",
+      "navy"
+    ]
+  },
+  {
+    "id": 1101,
+    "titel": "Turnbeutel weiß",
+    "kategorie": "Rucksäcke & Taschen",
+    "fundort": "Fachräume / MINT",
+    "abgabeort": "Bücherei-Theke",
+    "datum_fund": "2026-09-05",
+    "datum_ablauf": "2026-12-04",
+    "status": "Offen",
+    "beschreibung": "Turnbeutel, pink, wurde am 05.09.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Turnbeutel",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1040,
+    "titel": "Brille weiß",
+    "kategorie": "Schlüssel & Wertsachen",
+    "fundort": "Hauptgebäude - Foyer",
+    "abgabeort": "Hausmeisterbüro (Raum 001)",
+    "datum_fund": "2026-08-25",
+    "datum_ablauf": "2026-11-23",
+    "status": "Offen",
+    "beschreibung": "Brille, rot, wurde am 25.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": "demo_schlüssel_1.jpg",
+    "tags": [
+      "Brille",
+      "türkis"
+    ]
+  },
+  {
+    "id": 1067,
+    "titel": "Handschuhe lila",
+    "kategorie": "Kleidung & Textilien",
+    "fundort": "Musiksaal",
+    "abgabeort": "Sekretariat (Tresor)",
+    "datum_fund": "2026-08-28",
+    "datum_ablauf": "2026-11-26",
+    "status": "Offen",
+    "beschreibung": "Handschuhe, lila, wurde am 28.08.2026 gefunden. Liegt zur Abholung bereit.",
+    "image_file": null,
+    "tags": [
+      "Handschuhe",
+      "grün"
+    ]
+  }
+]

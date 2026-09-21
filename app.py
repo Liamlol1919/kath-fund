@@ -620,13 +620,14 @@ function fitHeight() {
 }
 window.addEventListener('load', fitHeight);
 window.addEventListener('resize', fitHeight);
-function openReport(mode) { window.parent.location.search = '?view=report' + (mode === 'camera' ? '&mode=camera' : ''); }
+setInterval(fitHeight, 500);
+function openReport(mode) { window.top.location.search = '?view=report' + (mode === 'camera' ? '&mode=camera' : ''); }
 function submitClaim() {
   const name = $('#claimName').value.trim(), proof = $('#claimProof').value.trim();
   const iid = claimModal.dataset.item;
   if (!name || !proof) { $('#claimName').classList.toggle('input-error', !name);
                          $('#claimProof').classList.toggle('textarea-error', !proof); return; }
-  window.parent.location.search = `?action=claim&item=${iid}&name=${encodeURIComponent(name)}&proof=${encodeURIComponent(proof)}`;
+  window.top.location.search = `?action=claim&item=${iid}&name=${encodeURIComponent(name)}&proof=${encodeURIComponent(proof)}`;
 }
 
 function statusBadge(s) {
@@ -796,4 +797,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-components.html(UI, height=1400, scrolling=True)
+# ÃuÃeres iframe: eigene Sandbox, damit Modal/Top-Navigation funktionieren
+OUTER = """<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#EDECE8;overflow:hidden}
+iframe{width:100%;border:0;display:block}</style></head><body>
+<iframe id="app" srcdoc="__SRCDOC__"
+  sandbox="allow-scripts allow-same-origin allow-top-navigation allow-forms allow-modals"
+  style="width:100%;height:1200px"></iframe>
+<script>
+const f = document.getElementById('app');
+function sync() {
+  try {
+    const h = f.contentDocument.documentElement.scrollHeight;
+    if (h > 200) f.style.height = h + 'px';
+  } catch (e) {}
+  try {
+    const of = window.frameElement;
+    if (of) {
+      const hh = parseInt(f.style.height) || 1200;
+      of.style.height = hh + 'px';
+      let p = of.parentElement;
+      if (p) p.style.height = hh + 'px';
+      if (p && p.parentElement) p.parentElement.style.height = 'auto';
+    }
+  } catch (e) {}
+}
+setInterval(sync, 400);
+window.addEventListener('message', sync);
+</script></body></html>"""
+
+outer = OUTER.replace("__SRCDOC__", html_mod.escape(UI, quote=True))
+components.html(outer, height=1200, scrolling=False)
