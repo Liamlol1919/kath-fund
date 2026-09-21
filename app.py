@@ -323,35 +323,35 @@ st.markdown(f"""
     div[data-testid="stSpinner"] p {{ font-family: 'IBM Plex Mono', monospace; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; }}
 
     /* ================= daisyUI-Komponenten (eigener Layer, kein Tailwind-Reset) ================= */
-    .card {
+    .card {{
         position: relative; display: flex; flex-direction: column; border-radius: var(--rounded-box);
-    }
-    .card figure { margin: 0; }
-    .card-body { padding: 1rem; display: flex; flex-direction: column; flex: 1; }
-    .card-title { display: flex; align-items: center; gap: .4rem; font-weight: 700; margin: 0; }
-    .card-title.text-base { font-size: 1.02rem; line-height: 1.3; }
+    }}
+    .card figure {{ margin: 0; }}
+    .card-body {{ padding: 1rem; display: flex; flex-direction: column; flex: 1; }}
+    .card-title {{ display: flex; align-items: center; gap: .4rem; font-weight: 700; margin: 0; }}
+    .card-title.text-base {{ font-size: 1.02rem; line-height: 1.3; }}
 
-    .badge {
+    .badge {{
         display: inline-flex; align-items: center; justify-content: center;
         height: 1.45rem; padding: 0 .55rem; border-radius: var(--rounded-badge);
         border: 1px solid var(--ink); font-size: .62rem; font-weight: 600;
         white-space: nowrap; text-transform: uppercase; letter-spacing: .06em;
         font-family: 'IBM Plex Mono', monospace;
-    }
-    .badge-sm { height: 1.2rem; padding: 0 .45rem; font-size: .56rem; }
-    .badge-ghost { background: var(--field); color: var(--ink-2); border-color: var(--line); }
-    .badge-outline { background: transparent; }
-    .badge-warning { background: #EFDFAF; color: var(--ink); }
-    .badge-info { background: #C9D8EC; color: var(--ink); }
-    .badge-success { background: #CBDCC4; color: var(--ink); }
-    .badge-error { background: #EBC4BC; color: var(--red); border-color: var(--red); }
-    .badge-error.badge-outline { background: var(--card); color: var(--red); }
-    .card-new { margin-left: 2px; }
+    }}
+    .badge-sm {{ height: 1.2rem; padding: 0 .45rem; font-size: .56rem; }}
+    .badge-ghost {{ background: var(--field); color: var(--ink-2); border-color: var(--line); }}
+    .badge-outline {{ background: transparent; }}
+    .badge-warning {{ background: #EFDFAF; color: var(--ink); }}
+    .badge-info {{ background: #C9D8EC; color: var(--ink); }}
+    .badge-success {{ background: #CBDCC4; color: var(--ink); }}
+    .badge-error {{ background: #EBC4BC; color: var(--red); border-color: var(--red); }}
+    .badge-error.badge-outline {{ background: var(--card); color: var(--red); }}
+    .card-new {{ margin-left: 2px; }}
 
     /* daisyUI-btn akzente fuer our buttons */
-    .btn { cursor: pointer; text-align: center; }
+    .btn {{ cursor: pointer; text-align: center; }}
 
-    div[data-testid="stImage"] img {{ border-radius: 10px; border: 1.5px solid var(--ink); }}
+    div[data-testid="stImage"] img {{{{ border-radius: 10px; border: 1.5px solid var(--ink); }}}}
 </style>
 """, unsafe_allow_html=True)
 
