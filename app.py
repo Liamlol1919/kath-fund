@@ -153,6 +153,20 @@ def file_uri(path_str, max_dim=1400):
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
+def hero_uris():
+    uris = []
+    for n in ["hero_1.png", "hero_2.png", "hero_3.png"]:
+        p = Path("assets") / n
+        if not p.exists():
+            continue
+        img = Image.open(p)
+        img.thumbnail((420, 420), Image.Resampling.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        uris.append("data:image/png;base64," + base64.b64encode(buf.getvalue()).decode())
+    return uris
+
+
 def logo_top_uri():
     p = Path("assets/logo_top.png")
     if not p.exists():
@@ -402,9 +416,11 @@ st.session_state["flash"] = ""
 
 wordmark = wordmark_uri()
 logo_top = logo_top_uri()
+hero_imgs = hero_uris()
 ipad_frame = file_uri("assets/ipad.png")
 logo_main = file_uri("assets/logo_new.png", 900) or logo_top
 data_json = json.dumps({"items": items_json, "wordmark": wordmark, "logoTop": logo_top,
+                        "hero": hero_imgs,
                         "categories": CATEGORIES, "claims": len(claims_json)},
                        ensure_ascii=False)
 
@@ -457,7 +473,7 @@ UI = r"""
 
   <!-- floating sidebar-button + FAB -->
   <button class="fixed top-3 left-3 z-40 w-10 h-10 rounded-xl bg-white border border-[var(--line)] shadow-sm flex items-center justify-center"
-          onclick="drawer.open()" aria-label="Menü">
+          onclick="try{drawer.showModal()}catch(e){}" aria-label="Menü">
     <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
   </button>
   <button class="fixed bottom-4 right-4 z-40 h-12 px-4 rounded-full btn-accent shadow-lg text-sm font-semibold flex items-center gap-2"
@@ -475,7 +491,8 @@ UI = r"""
 
   <!-- ============ HOME ============ -->
   <div id="view-home" class="max-w-6xl mx-auto px-4 pb-10">
-    <div class="dots rounded-2xl -mx-4 px-4 pt-7 pb-5 text-center">
+    <div class="dots rounded-2xl -mx-4 px-4 pt-7 pb-5 relative overflow-hidden">
+      <img id="heroImg" src="" alt="" class="absolute right-4 md:right-16 top-1/2 -translate-y-1/2 w-28 md:w-36 opacity-90 transition-all duration-700 pointer-events-none" style="filter: drop-shadow(0 10px 18px rgba(24,24,27,.15));">
       <img src="__LOGO__" class="w-52 md:w-60 mx-auto" alt="kath.fund">
     </div>
 
@@ -639,7 +656,8 @@ function statusBadge(s) {
 function card(i) {
   const fig = i.img
     ? `<figure class="h-32 overflow-hidden"><img src="${i.img}" class="w-full h-full object-cover" alt=""></figure>`
-    : `<figure class="h-32 dots flex items-center justify-center text-[var(--muted)]">${katSvg(i.kategorie,'lucide')}<span style="width:2em;height:2em"></span></figure>`;
+    : `<figure class="h-32 dots flex items-center justify-center text-[var(--muted)]">
+         ${katSvg(i.kategorie,'lucide').replace('class="lucide"','class="lucide" style="width:2.8em;height:2.8em"')}</figure>`;
   const neu = i.neu ? `<span class="text-[.62rem] font-semibold uppercase rounded-full px-2 py-0.5 bg-[var(--accent)] text-white">Neu</span>` : '';
   return `
   <div class="icard icard-hover cursor-pointer overflow-hidden" onclick="openItem(${i.id},'grid')">
@@ -658,7 +676,8 @@ function openItem(id, ctx) {
   const claimable = i.status === 'Offen' || i.status === 'Beansprucht';
   const fig = i.img
     ? `<img src="${i.img}" class="w-full rounded-xl border border-[var(--line)] object-cover">`
-    : `<div class="rounded-xl border border-dashed border-[var(--line-dash)] h-56 dots flex items-center justify-center text-[var(--muted)]">${katSvg(i.kategorie,'lucide')}<span style="width:3.2em;height:3.2em"></span></div>`;
+    : `<div class="rounded-xl border border-dashed border-[var(--line-dash)] h-56 dots flex items-center justify-center text-[var(--muted)]">
+         ${katSvg(i.kategorie,'lucide').replace('class="lucide"','class="lucide" style="width:4.5em;height:4.5em"')}</div>`;
   const tags = (i.tags||[]).map(t=>`<span class="text-[.68rem] rounded-full border border-[var(--line)] px-2 py-0.5">${esc(t)}</span>`).join('');
   $('#itemDetail').innerHTML = `
   <div class="flex items-center gap-2 flex-wrap mt-1">
@@ -766,6 +785,21 @@ function init() {
     <div class="icard p-2.5"><p class="lbl">Abgeholt</p><p class="text-lg font-extrabold text-[var(--ok)]">${items.filter(i=>i.status==='Abgeholt').length}</p></div>
     <div class="icard p-2.5"><p class="lbl">Gesamt</p><p class="text-lg font-extrabold">${items.length}</p></div>`;
   renderChips();
+  // Hero-Bilder rotieren alle 4s
+  const heroImgs = DATA.hero || [];
+  if (heroImgs.length) {
+    let hi = 0;
+    const el = $('#heroImg');
+    el.src = heroImgs[0]; el.style.opacity = .9;
+    setInterval(() => {
+      el.style.opacity = 0; el.style.transform = 'translateY(-50%) scale(.9)';
+      setTimeout(() => {
+        hi = (hi + 1) % heroImgs.length;
+        el.src = heroImgs[hi];
+        el.style.opacity = .9; el.style.transform = 'translateY(-50%) scale(1)';
+      }, 350);
+    }, 4000);
+  }
   fitHeight();
 }
 init();
