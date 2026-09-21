@@ -246,18 +246,34 @@ VISION_CLASS_TO_CATEGORY = {
 }
 
 
+MODEL_RELEASE = "https://github.com/Liamlol1919/kath-fund/releases/download/models"
+
+
+def _ensure_model(filename: str):
+    """Laedt das onnx-modell bei bedarf aus dem gh-release (einmalig, gecached)."""
+    p = Path(filename)
+    if p.exists() and p.stat().st_size > 1000:
+        return p
+    import urllib.request
+    try:
+        urllib.request.urlretrieve(f"{MODEL_RELEASE}/{filename}", p)
+    except Exception:
+        return None
+    return p
+
+
 @st.cache_resource(show_spinner="🧠 Erkennungs-Modell wird geladen — bitte ca. 10 Sekunden warten …")
 def load_vision_model():
     try:
         import onnxruntime as ort
         lp = Path("imagenet_labels.json")
         labels = json.loads(lp.read_text(encoding="utf-8"))
-        eff = Path("efficientnet-lite4.onnx")
-        if eff.exists():
+        eff = _ensure_model("efficientnet-lite4.onnx")
+        if eff:
             session = ort.InferenceSession(str(eff), providers=["CPUExecutionProvider"])
             return session, labels, "effnet"
-        mp = Path("mobilenetv2.onnx")
-        if mp.exists():
+        mp = _ensure_model("mobilenetv2.onnx")
+        if mp:
             session = ort.InferenceSession(str(mp), providers=["CPUExecutionProvider"])
             return session, labels, "mobilenet"
         return None
