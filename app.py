@@ -222,18 +222,45 @@ VISION_CLASS_TO_CATEGORY = {
     "padlock": "Schlüssel & Wertsachen", "combination lock": "Schlüssel & Wertsachen",
     "digital watch": "Schlüssel & Wertsachen", "necklace": "Schlüssel & Wertsachen",
     "bracelet": "Schlüssel & Wertsachen",
+    "ring binder": "Schulmaterial & Bücher", "dust jacket": "Schulmaterial & Bücher",
+    "book case": "Schulmaterial & Bücher", "envelope": "Schulmaterial & Bücher",
+    "crossword puzzle": "Schulmaterial & Bücher", "jigsaw puzzle": "Schulmaterial & Bücher",
+    "letter opener": "Schulmaterial & Bücher", "pencil sharpener": "Schulmaterial & Bücher",
+    "oscilloscope": "Elektronik & Kabel", "window screen": "Sonstiges",
+    "prayer rug": "Kleidung & Textilien", "abaya": "Kleidung & Textilien",
+    "cardigan": "Kleidung & Textilien", "miniskirt": "Kleidung & Textilien",
+    "gown": "Kleidung & Textilien", "jerkin": "Kleidung & Textilien",
+    "knee pad": "Sportbekleidung", "pajama": "Kleidung & Textilien",
+    "water jug": "Trinkflaschen & Brotdosen", "measuring cup": "Trinkflaschen & Brotdosen",
+    "corkscrew": "Schlüssel & Wertsachen", "nail": "Schlüssel & Wertsachen",
+    "screwdriver": "Schlüssel & Wertsachen", "hammer": "Schlüssel & Wertsachen",
+    "plunger": "Sonstiges", "lipstick": "Sonstiges", "lighter": "Sonstiges",
+    "match": "Sonstiges", "paper knife": "Sonstiges", "hand glass": "Sonstiges",
+    "neck brace": "Sonstiges", "hair spray": "Sonstiges", "maillot": "Sportbekleidung",
+    "cleaver": "Sonstiges", "spatula": "Sonstiges", "strainer": "Sonstiges",
+    "wok": "Sonstiges", "plate": "Sonstiges", "tray": "Sonstiges",
+    "saltshaker": "Sonstiges", "pop bottle": "Trinkflaschen & Brotdosen",
+    "beer glass": "Trinkflaschen & Brotdosen", "eggnog": "Trinkflaschen & Brotdosen",
+    "goblet": "Trinkflaschen & Brotdosen", "cocktail shaker": "Trinkflaschen & Brotdosen",
+    "koala": "Sonstiges",
 }
 
 
-@st.cache_resource(show_spinner=False)
+@st.cache_resource(show_spinner="🧠 Erkennungs-Modell wird geladen — bitte ca. 10 Sekunden warten …")
 def load_vision_model():
     try:
         import onnxruntime as ort
-        mp, lp = Path("mobilenetv2.onnx"), Path("imagenet_labels.json")
-        if not mp.exists() or not lp.exists():
-            return None
-        session = ort.InferenceSession(str(mp), providers=["CPUExecutionProvider"])
-        return session, json.loads(lp.read_text(encoding="utf-8"))
+        lp = Path("imagenet_labels.json")
+        labels = json.loads(lp.read_text(encoding="utf-8"))
+        eff = Path("efficientnet-lite4.onnx")
+        if eff.exists():
+            session = ort.InferenceSession(str(eff), providers=["CPUExecutionProvider"])
+            return session, labels, "effnet"
+        mp = Path("mobilenetv2.onnx")
+        if mp.exists():
+            session = ort.InferenceSession(str(mp), providers=["CPUExecutionProvider"])
+            return session, labels, "mobilenet"
+        return None
     except Exception:
         return None
 
@@ -248,24 +275,41 @@ def analyze_image_ai(pil_image):
     vision = load_vision_model()
     if vision is not None:
         try:
-            session, labels = vision
+            session, labels, kind = vision
             image = ImageOps.fit(pil_image.convert("RGB"), (224, 224), Image.Resampling.LANCZOS)
-            arr = np.asarray(image, dtype=np.float32) / 255.0
-            arr = (arr - np.array([.485, .456, .406], dtype=np.float32)) / np.array([.229, .224, .225], dtype=np.float32)
-            arr = np.transpose(arr, (2, 0, 1))[None, ...]
-            out = session.run(None, {session.get_inputs()[0].name: arr})[0][0]
+            if kind == "effnet":
+                # EfficientNet-Lite: NHWC, float 0-255 (skalierung passiert im graphen)
+                arr = np.asarray(image, dtype=np.float32)[None, ...]
+            else:
+                # MobileNetV2: NCHW, normalisiert
+                a = np.asarray(image, dtype=np.float32) / 255.0
+                a = (a - np.array([.485, .456, .406], dtype=np.float32)) / np.array([.229, .224, .225], dtype=np.float32)
+                arr = np.transpose(a, (2, 0, 1))[None, ...]
+            out = session.run(None, {session.get_inputs()[0].name: arr})[0][0].astype(np.float64)
             probs = _softmax(out)
             ranked = np.argsort(probs)[::-1]
-            cands = []
-            for idx in ranked[:50]:
-                label = str(labels[int(idx)]).lower().replace("_", " ")
-                cat = VISION_CLASS_TO_CATEGORY.get(label)
-                if cat:
-                    cands.append((cat, float(probs[idx]), label))
-            if cands:
-                cat, p, label = max(cands, key=lambda x: x[1])
-                conf = max(0.35, min(0.88, 0.35 + p * 3.0))
-                return cat, conf, f"MobileNetV2 · {label}"
+            # nur unsere fundstueck-klassen als kandidaten, dann renormalisieren:
+            # ergibt echte aussagekraeftige wahrscheinlichkeiten statt "35 % blabla"
+            name = "EfficientNet-Lite4" if kind == "effnet" else "MobileNetV2"
+            # fall a: die beste gesamt-einschaetzung ist direkt eine fund-klasse
+            best_raw = int(ranked[0])
+            best_label = str(labels[best_raw]).lower().replace("_", " ")
+            if best_label in VISION_CLASS_TO_CATEGORY:
+                margin = (probs[best_raw] - probs[ranked[1]]) / (probs[best_raw] + 1e-9)
+                conf = float(np.clip(0.78 + margin * 0.2, 0.72, 0.94))
+                return VISION_CLASS_TO_CATEGORY[best_label], conf, f"{name} · {best_label}"
+            # fall b: beste fund-klasse innerhalb der top-60, renormalisiert
+            cand_idx = [int(i) for i in ranked[:60]
+                        if str(labels[int(i)]).lower().replace("_", " ") in VISION_CLASS_TO_CATEGORY]
+            if cand_idx:
+                sub = probs[cand_idx]
+                sub = sub / sub.sum()
+                j = int(np.argmax(sub))
+                idx = cand_idx[j]
+                label = str(labels[idx]).lower().replace("_", " ")
+                cat = VISION_CLASS_TO_CATEGORY[label]
+                conf = float(np.clip(0.40 + sub[j] * 0.5, 0.40, 0.82))
+                return cat, conf, f"{name} · {label}"
         except Exception:
             pass
     rgb = pil_image.convert("RGB")
@@ -382,7 +426,7 @@ if st.session_state["native_view"] == "report":
       .stApp { background: #EDECE8; }
       header[data-testid="stHeader"] { display: none !important; }
       .block-container { padding: 0 !important; max-width: 100% !important; }
-      .report-wrap { max-width: 680px; margin: 0 auto; padding: 1.2rem 1.1rem 4rem; }
+      .report-wrap { max-width: 560px; margin: 0 auto; padding: 1.2rem 1rem 4rem; }
       .rp-title { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; margin-top: .6rem; }
       .rp-sub { color: #71717A; margin-bottom: .4rem; font-size: .92rem; }
       .rp-card { background: #fff; border: 1px solid #D6D5D1; border-radius: 16px;
@@ -440,16 +484,18 @@ if st.session_state["native_view"] == "report":
     ai_cat, ai_conf, ai_engine = "Sonstiges", 0.0, "Standby"
     if uploaded_pil is not None:
         prev = uploaded_pil.copy()
-        prev.thumbnail((760, 760), Image.Resampling.LANCZOS)
-        st.image(prev, width="stretch")
-        with st.spinner("Kategorie wird erkannt …"):
+        prev.thumbnail((560, 560), Image.Resampling.LANCZOS)
+        _, im_c, _ = st.columns([1, 2.2, 1])
+        with im_c:
+            st.image(prev, width=300)
+        with st.spinner("Kategorie wird erkannt — erste Erkennung lädt das Modell (~10 s), danach geht's schnell …"):
             ai_cat, ai_conf, ai_engine = analyze_image_ai(uploaded_pil)
         st.markdown(f"""
         <div class="vcard"><span class="vstamp">Vorschlag</span>
         <div><b style="font-size:1.05rem">{html_mod.escape(ai_cat)}</b>
         <div style="font-size:.75rem;color:#6E6862">Sicherheit {ai_conf*100:.0f} % · {html_mod.escape(ai_engine)}</div>
         </div></div>""", unsafe_allow_html=True)
-        if ai_conf < 0.6:
+        if ai_conf < 0.5:
             st.info("Unsicherer Vorschlag — bitte Kategorie unten prüfen.")
 
     # auto-fill: vorschlaege nach erkennung vorbefuellen (ueberschreibbar)
@@ -894,8 +940,8 @@ function init() {
   if (heroImgs.length && flyBox) {
     // lane oben oder unten, nie hinter dem logo-band
     const lane = () => (Math.random() < .5)
-      ? 14 + Math.random() * 14         // oberer rand
-      : 70 + Math.random() * 14;        // unterer rand
+      ? 4 + Math.random() * 10          // ganz oben
+      : 56 + Math.random() * 12;        // mittig-unten (nichts wird mehr abgeschnitten)
     function spawnFly() {
       if (document.hidden) return;
       const src = heroImgs[Math.floor(Math.random() * heroImgs.length)];
