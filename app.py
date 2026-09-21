@@ -4,6 +4,437 @@
 ===============================================================================
 """
 
+import datetime
+from PIL import Image
+import pandas as pd
+import streamlit as st
+
+# =============================================================================
+# 1. PAGE CONFIG & SESSION STATE INITIALIZATION
+# =============================================================================
+
+st.set_page_config(
+    page_title="Kath. Fund",
+    page_icon="🔍",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+CATEGORIES = [
+    "Kleidung & Textilien",
+    "Trinkflaschen & Brotdosen",
+    "Rucksäcke & Taschen",
+    "Elektronik & Kabel",
+    "Schlüssel & Wertsachen",
+    "Schulmaterial & Bücher",
+    "Sportbekleidung",
+    "Sonstiges",
+]
+
+LOCATIONS = [
+    "Hauptgebäude - Foyer",
+    "Pausenhof",
+    "Sporthalle",
+    "Mensa / Cafeteria",
+    "Bibliothek",
+    "Fachräume / MINT",
+    "Unbekannt",
+]
+
+if "fundstuecke_liste" not in st.session_state:
+  st.session_state["fundstuecke_liste"] = [
+      {
+          "id": 1001,
+          "titel": "Derbe Regenjacke Dunkelblau",
+          "kategorie": "Kleidung & Textilien",
+          "fundort": "Pausenhof",
+          "abgabeort": "Hausmeisterbüro (Raum 001)",
+          "kontakt_kuerzel": "S-MUELLER",
+          "finder_rolle": "Schüler:in",
+          "datum_fund": "2026-09-01",
+          "datum_ablauf": "2026-12-01",
+          "status": "Offen",
+          "beschreibung": "Größe M, gelber Reißverschluss.",
+          "image_data": None,
+          "tags": ["Jacke", "Blau", "Größe M"],
+      },
+      {
+          "id": 1002,
+          "titel": "AirPods Pro Case",
+          "kategorie": "Elektronik & Kabel",
+          "fundort": "Mensa / Cafeteria",
+          "abgabeort": "Sekretariat",
+          "kontakt_kuerzel": "HAUSMEISTER-K",
+          "finder_rolle": "Hausmeister",
+          "datum_fund": "2026-09-05",
+          "datum_ablauf": "2026-12-05",
+          "status": "Beansprucht",
+          "beschreibung": "Kratzer auf der Rückseite, schwarze Schutzhülle.",
+          "image_data": None,
+          "tags": ["Apple", "Audio", "Schwarz"],
+      },
+      {
+          "id": 1003,
+          "titel": "Edelstahl Trinkflasche 1L",
+          "kategorie": "Trinkflaschen & Brotdosen",
+          "fundort": "Sporthalle",
+          "abgabeort": "Sporthalle Regallager",
+          "kontakt_kuerzel": "L-SCHMIDT",
+          "finder_rolle": "Lehrkraft",
+          "datum_fund": "2026-08-28",
+          "datum_ablauf": "2026-11-28",
+          "status": "Abgeholt",
+          "beschreibung": "Mattgrün mit Aufklebern.",
+          "image_data": None,
+          "tags": ["720°DGREE", "Grün", "Metall"],
+      },
+  ]
+
+if "claims" not in st.session_state:
+  st.session_state["claims"] = []
+
+if "audit_logs" not in st.session_state:
+  st.session_state["audit_logs"] = [{
+      "timestamp": "2026-09-01 08:30:00",
+      "user": "System",
+      "action": "System gestartet",
+  }]
+
+if "current_role" not in st.session_state:
+  st.session_state["current_role"] = "Schüler:in"
+
+if "is_authenticated" not in st.session_state:
+  st.session_state["is_authenticated"] = False
+
+
+def log_action(user: str, action: str):
+  now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  st.session_state["audit_logs"].append(
+      {"timestamp": now, "user": user, "action": action}
+  )
+
+
+# =============================================================================
+# 2. STYLING (SKIZZEN-DESIGN "KATH. FUND")
+# =============================================================================
+
+st.markdown(
+    """
+<style>
+    .header-skizze {
+        text-align: center;
+        padding: 10px 0 20px 0;
+        border-bottom: 2px solid #333;
+        margin-bottom: 25px;
+    }
+    .header-logo {
+        font-size: 2.8rem;
+        font-weight: 900;
+        letter-spacing: -1px;
+        color: #1e293b;
+        font-family: 'Arial Black', sans-serif;
+    }
+    .card-box {
+        background-color: #ffffff;
+        border: 2px solid #000000;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 15px;
+        min-height: 280px;
+    }
+    .card-img-placeholder {
+        width: 100%;
+        height: 140px;
+        background-color: #f1f5f9;
+        border: 1px dashed #94a3b8;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+    .card-title {
+        font-weight: 800;
+        font-size: 1.1rem;
+        margin: 5px 0;
+        color: #0f172a;
+    }
+    .tag-badge {
+        display: inline-block;
+        background-color: #e2e8f0;
+        color: #334155;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 0.75rem;
+        margin-right: 4px;
+        margin-top: 4px;
+        font-weight: 600;
+    }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+# =============================================================================
+# 3. SIDEBAR NAVIGATION
+# =============================================================================
+
+with st.sidebar:
+  st.markdown("## ⚙️ Einstellungen & Rolle")
+  role = st.selectbox(
+      "Aktive Rolle", ["Schüler:in", "Lehrkraft", "Hausmeister / Admin"]
+  )
+  st.session_state["current_role"] = role
+
+  if role == "Hausmeister / Admin":
+    pin = st.text_input("Admin-PIN", type="password")
+    if pin == "1234":
+      st.session_state["is_authenticated"] = True
+      st.success("✅ Admin aktiviert")
+    else:
+      st.session_state["is_authenticated"] = False
+      if pin != "":
+        st.error("❌ Falscher PIN")
+  else:
+    st.session_state["is_authenticated"] = True
+
+  st.divider()
+
+  total_cnt = len(st.session_state["fundstuecke_liste"])
+  offen_cnt = len(
+      [i for i in st.session_state["fundstuecke_liste"] if i["status"] == "Offen"]
+  )
+
+  st.metric("Gesamte Fundstücke", total_cnt)
+  st.metric("Offen zur Abholung", offen_cnt)
+
+# =============================================================================
+# 4. MAIN HEADER (KATH. FUND LOGO LAUT SKIZZE)
+# =============================================================================
+
+st.markdown(
+    """
+<div class="header-skizze">
+    <div class="header-logo">⚙️ Kath. Fund</div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+tab_main, tab_form, tab_claims, tab_admin = st.tabs(
+    ["🔍 Katalog (main)", "➕ Erfassen (form)", "✋ Beanspruchen", "⚙️ Admin"]
+)
+
+# =============================================================================
+# TAB 1: MAIN (KATALOG & SUCHE MIT GO-BUTTON)
+# =============================================================================
+
+with tab_main:
+  col_search, col_go = st.columns([5, 1])
+  with col_search:
+    search_query = st.text_input(
+        "Search",
+        placeholder="Suchbegriff eingeben...",
+        label_visibility="collapsed",
+    )
+  with col_go:
+    go_click = st.button("GO 🔍", use_container_width=True)
+
+  col_f1, col_f2 = st.columns([1, 1])
+  with col_f1:
+    kat_filter = st.selectbox("Kategorie", ["Alle"] + CATEGORIES)
+  with col_f2:
+    loc_filter = st.selectbox("Fundort", ["Alle"] + LOCATIONS)
+
+  items = st.session_state["fundstuecke_liste"]
+  if search_query:
+    items = [
+        i
+        for i in items
+        if search_query.lower() in i["titel"].lower()
+        or search_query.lower() in i["beschreibung"].lower()
+    ]
+  if kat_filter != "Alle":
+    items = [i for i in items if i["kategorie"] == kat_filter]
+  if loc_filter != "Alle":
+    items = [i for i in items if i["fundort"] == loc_filter]
+
+  st.divider()
+
+  if not items:
+    st.info("Keine Fundstücke vorhanden.")
+  else:
+    for i in range(0, len(items), 3):
+      cols = st.columns(3)
+      for idx, col in enumerate(cols):
+        if i + idx < len(items):
+          item = items[i + idx]
+          with col:
+            st.markdown('<div class="card-box">', unsafe_allow_html=True)
+
+            if item["image_data"] is not None:
+              st.image(item["image_data"], use_container_width=True)
+            else:
+              st.markdown(
+                  '<div class="card-img-placeholder">📷 Kein Foto</div>',
+                  unsafe_allow_html=True,
+              )
+
+            st.markdown(
+                f'<div class="card-title">#{item["id"]} - {item["titel"]}</div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                f"📍 {item['fundort']} | Status: **{item['status']}**"
+            )
+
+            tags_html = "".join([
+                f'<span class="tag-badge">#{t}</span>'
+                for t in item.get("tags", [])
+            ])
+            st.markdown(tags_html, unsafe_allow_html=True)
+
+            with st.expander("Details anzeigen"):
+              st.write(f"**Beschreibung:** {item['beschreibung']}")
+              st.write(f"**Abgabeort:** {item['abgabeort']}")
+              st.write(f"**Finder:** {item['kontakt_kuerzel']}")
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+# =============================================================================
+# TAB 2: FORM (NEUERFASSUNG LAUT SKIZZE)
+# =============================================================================
+
+with tab_form:
+  st.markdown("### ➕ Neues Fundstück eintragen")
+
+  col_u1, col_u2 = st.columns([1, 2])
+
+  with col_u1:
+    uploaded_file = st.file_uploader(
+        "📷 [ Upload ]", type=["jpg", "jpeg", "png"]
+    )
+    uploaded_image = None
+    if uploaded_file is not None:
+      uploaded_image = Image.open(uploaded_file)
+      st.image(uploaded_image, caption="Vorschau", use_container_width=True)
+
+  with col_u2:
+    with st.form("add_form", clear_on_submit=True):
+      in_titel = st.text_input("Titel*")
+      in_kat = st.selectbox("Kategorie", CATEGORIES)
+      in_loc = st.selectbox("Fundort", LOCATIONS)
+      in_abgabe = st.text_input(
+          "Abgabeort / Aufbewahrung", value="Hausmeisterbüro"
+      )
+      in_tags = st.text_input(
+          "Tags (kommagetrennt)", placeholder="z. B. Jacke, Blau, Nike"
+      )
+      in_kuerzel = st.text_input("Dein Kürzel*", placeholder="z. B. MAX-8A")
+      in_desc = st.text_area("Beschreibung")
+
+      btn_save = st.form_submit_button("Speichern 💾", use_container_width=True)
+
+      if btn_save:
+        if not in_titel or not in_kuerzel:
+          st.error("Bitte Titel und Kürzel ausfüllen!")
+        else:
+          new_id = (
+              max([i["id"] for i in st.session_state["fundstuecke_liste"]]) + 1
+              if st.session_state["fundstuecke_liste"]
+              else 1001
+          )
+          parsed_tags = [t.strip() for t in in_tags.split(",") if t.strip()]
+
+          new_item = {
+              "id": new_id,
+              "titel": in_titel,
+              "kategorie": in_kat,
+              "fundort": in_loc,
+              "abgabeort": in_abgabe,
+              "kontakt_kuerzel": in_kuerzel.upper(),
+              "finder_rolle": st.session_state["current_role"],
+              "datum_fund": datetime.date.today().strftime("%Y-%m-%d"),
+              "datum_ablauf": (
+                  datetime.date.today() + datetime.timedelta(days=90)
+              ).strftime("%Y-%m-%d"),
+              "status": "Offen",
+              "beschreibung": in_desc,
+              "image_data": uploaded_image,
+              "tags": parsed_tags,
+          }
+          st.session_state["fundstuecke_liste"].append(new_item)
+          log_action(in_kuerzel.upper(), f"Item #{new_id} angelegt")
+          st.success(f"Fundstück #{new_id} erfolgreich gespeichert!")
+          st.rerun()
+
+# =============================================================================
+# TAB 3: BEANSPRUCHEN
+# =============================================================================
+
+with tab_claims:
+  st.markdown("### ✋ Fundstück beanspruchen")
+
+  open_items = {
+      f"#{i['id']} - {i['titel']}": i["id"]
+      for i in st.session_state["fundstuecke_liste"]
+      if i["status"] == "Offen"
+  }
+
+  if not open_items:
+    st.info("Keine offenen Fundstücke verfügbar.")
+  else:
+    selected_label = st.selectbox("Gegenstand wählen", list(open_items.keys()))
+    selected_id = open_items[selected_label]
+
+    with st.form("claim_form"):
+      c_name = st.text_input("Dein Name / Klasse*")
+      c_proof = st.text_area("Eigentumsnachweis (z.B. Merkmale)*")
+      btn_claim = st.form_submit_button("Anspruch einreichen")
+
+      if btn_claim:
+        if c_name and c_proof:
+          st.session_state["claims"].append({
+              "claim_id": len(st.session_state["claims"]) + 1,
+              "item_id": selected_id,
+              "name": c_name,
+              "proof": c_proof,
+              "status": "In Prüfung",
+          })
+          st.success("Anspruch eingereicht!")
+        else:
+          st.error("Bitte alle Felder ausfüllen!")
+
+# =============================================================================
+# TAB 4: ADMIN
+# =============================================================================
+
+with tab_admin:
+  st.markdown("### ⚙️ Admin & Übersicht")
+  if (
+      not st.session_state["is_authenticated"]
+      and st.session_state["current_role"] == "Hausmeister / Admin"
+  ):
+    st.warning(
+        "🔒 Bitte gib den Admin-PIN in der Seitenleiste ein (Demo: 1234)."
+    )
+  else:
+    st.dataframe(
+        pd.DataFrame(st.session_state["fundstuecke_liste"]),
+        use_container_width=True,
+    )
+
+    st.markdown("#### Audit Logs")
+    st.dataframe(
+        pd.DataFrame(st.session_state["audit_logs"]), use_container_width=True
+    )"""
+===============================================================================
+               KATH. FUND - FUNDBÜRO APP (SKIZZEN-LAYOUT)
+===============================================================================
+"""
+
 import streamlit as st
 from PIL import Image, ImageOps
 import numpy as np
