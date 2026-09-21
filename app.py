@@ -319,7 +319,10 @@ if qp.get("view") == "report":
       .vstamp { background:#F6DEDA; color:#B23A2A; font-weight:700; font-size:.72rem;
                 padding:6px 10px; border-radius:8px; white-space:nowrap; }
     </style>
-    <div class="report-wrap"><div class="rp-title">📷 Fund melden</div>
+    <div class="report-wrap">
+    <button onclick="window.parent.location.search=''"
+      style="border:1px solid #D6D5D1;background:#fff;border-radius:10px;padding:6px 12px;font-size:.85rem;cursor:pointer;">← Zurück zur App</button>
+    <div class="rp-title">📷 Fund melden</div>
     <div class="rp-sub">Foto aufnehmen oder hochladen — Kategorie wird automatisch vorgeschlagen.
     Nach dem Eintrag landet das Fundstück direkt im Verzeichnis.</div></div>
     """, unsafe_allow_html=True)
