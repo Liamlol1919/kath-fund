@@ -3,10 +3,9 @@ kath.fund — Fundbüro · Katharineum zu Lübeck
 Architektur: Streamlit = Backend only. Die gesamte UI läuft als ein HTML-Dokument
 (Tailwind + daisyUI) direkt im Streamlit-DOM injiziert — kein iframe, keine Sandbox.
 
-Kommunikation:
-  Python -> iframe:  items/claims als JSON eingebettet
-  iframe  -> Python: window.parent.location.search = ?action=...  (löst Rerun aus)
-Suche/Filter/Navigation laufen komplett im iframe (JS) — instant, ohne Server.
+Kommunikation: Die UI wird direkt ins Streamlit-DOM injiziert (st.markdown).
+  Aktionen (melden, beanspruchen) = echte Links / location.search -> Streamlit-Rerun.
+  Suche/Filter/Navigation laufen in JS im selben Dokument — instant, ohne Server.
 """
 
 import json
@@ -280,7 +279,7 @@ def analyze_image_ai(pil_image):
 
 
 # =============================================================================
-# 4. AKTIONEN (aus dem iframe via Query-Params)
+# 4. AKTIONEN (via Query-Params)
 # =============================================================================
 
 qp = st.query_params
@@ -399,7 +398,7 @@ if qp.get("view") == "report":
     st.stop()
 
 # =============================================================================
-# 6. UI (ein HTML-Dokument mit daisyUI im iframe)
+# 6. UI (HTML mit daisyUI, direkt ins DOM)
 # =============================================================================
 
 neu_grenze = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
