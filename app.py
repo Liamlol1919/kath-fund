@@ -4,6 +4,7 @@
 ===============================================================================
 Inspirationsbasis: Originale Papier-Skizze (Kath. Fund Layout & Workflow)
 Optimiert für Streamlit >= 1.40
+KI-Modell: MobileNetV2 (öffentlich, vortrainiert auf ImageNet)
 ===============================================================================
 """
 
@@ -18,12 +19,6 @@ import streamlit as st
 from PIL import Image, ImageOps, ImageDraw
 import numpy as np
 import pandas as pd
-
-try:
-    import qrcode
-    HAS_QRCODE = True
-except ImportError:
-    HAS_QRCODE = False
 
 # =============================================================================
 # 1. STREAMLIT CONFIG & CUSTOM STYLING
@@ -370,120 +365,140 @@ def load_item_image(filename: str):
             return None
     return None
 
-def generate_qr_image(item: dict) -> Image.Image:
-    payload = f"Kath. Fund #{item['id']}: {item['titel']} | Status: {item['status']} | Abholung: {item['abgabeort']}"
-    if HAS_QRCODE:
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_M,
-            box_size=8,
-            border=2,
-        )
-        qr.add_data(payload)
-        qr.make(fit=True)
-        # In echtes Standard-PIL-RGB Image umwandeln
-        qr_raw = qr.make_image(fill_color="#0f172a", back_color="white")
-        buf = io.BytesIO()
-        qr_raw.save(buf, format="PNG")
-        buf.seek(0)
-        return Image.open(buf).convert("RGB")
-    else:
-        img = Image.new("RGB", (240, 240), color="white")
-        draw = ImageDraw.Draw(img)
-        draw.rectangle([10, 10, 230, 230], outline="#0f172a", width=4)
-        draw.text((20, 110), f"ID #{item['id']} - {item['titel'][:18]}", fill="#0f172a")
-        return img
-
 # =============================================================================
-# 3. AI VISION ENGINE (H5 TEACHABLE MACHINE & HEURISTIK)
+# 3. AI VISION ENGINE (MOBILENETV2 + FALLBACKS)
 # =============================================================================
 
-LABELS_FILE = Path("labels.txt")
+# Mapping von ImageNet-Klassen (MobileNetV2) auf unsere Kategorien
+IMAGENET_CLASS_TO_CATEGORY = {
+    # Kleidung
+    "t-shirt": "Kleidung & Textilien",
+    "jersey": "Kleidung & Textilien",
+    "sweatshirt": "Kleidung & Textilien",
+    "pullover": "Kleidung & Textilien",
+    "cardigan": "Kleidung & Textilien",
+    "sweater": "Kleidung & Textilien",
+    "jacket": "Kleidung & Textilien",
+    "coat": "Kleidung & Textilien",
+    "jean": "Kleidung & Textilien",
+    "trousers": "Kleidung & Textilien",
+    "dress": "Kleidung & Textilien",
+    "scarf": "Kleidung & Textilien",
+    "hat": "Kleidung & Textilien",
+    "glove": "Kleidung & Textilien",
+    # Elektronik
+    "ipad": "Elektronik & Kabel",
+    "tablet": "Elektronik & Kabel",
+    "laptop": "Elektronik & Kabel",
+    "notebook": "Elektronik & Kabel",
+    "computer": "Elektronik & Kabel",
+    "keyboard": "Elektronik & Kabel",
+    "mouse": "Elektronik & Kabel",
+    "cellular telephone": "Elektronik & Kabel",
+    "mobile phone": "Elektronik & Kabel",
+    "smartphone": "Elektronik & Kabel",
+    "headphone": "Elektronik & Kabel",
+    "earphone": "Elektronik & Kabel",
+    "microphone": "Elektronik & Kabel",
+    "charger": "Elektronik & Kabel",
+    "cable": "Elektronik & Kabel",
+    "adapter": "Elektronik & Kabel",
+    "camera": "Elektronik & Kabel",
+    "smartwatch": "Elektronik & Kabel",
+    # Taschen & Rucksäcke
+    "backpack": "Rucksäcke & Taschen",
+    "rucksack": "Rucksäcke & Taschen",
+    "bag": "Rucksäcke & Taschen",
+    "purse": "Rucksäcke & Taschen",
+    "handbag": "Rucksäcke & Taschen",
+    "wallet": "Rucksäcke & Taschen",
+    "briefcase": "Rucksäcke & Taschen",
+    "suitcase": "Rucksäcke & Taschen",
+    # Trinkflaschen & Brotdosen
+    "water bottle": "Trinkflaschen & Brotdosen",
+    "water jug": "Trinkflaschen & Brotdosen",
+    "bottle": "Trinkflaschen & Brotdosen",
+    "thermos": "Trinkflaschen & Brotdosen",
+    "lunch box": "Trinkflaschen & Brotdosen",
+    "food container": "Trinkflaschen & Brotdosen",
+    "mug": "Trinkflaschen & Brotdosen",
+    "cup": "Trinkflaschen & Brotdosen",
+    # Schulmaterial & Bücher
+    "book": "Schulmaterial & Bücher",
+    "textbook": "Schulmaterial & Bücher",
+    "notebook": "Schulmaterial & Bücher",
+    "pencil": "Schulmaterial & Bücher",
+    "pen": "Schulmaterial & Bücher",
+    "pencil case": "Schulmaterial & Bücher",
+    "pencil box": "Schulmaterial & Bücher",
+    "eraser": "Schulmaterial & Bücher",
+    "ruler": "Schulmaterial & Bücher",
+    "calculator": "Schulmaterial & Bücher",
+    # Schlüssel & Wertsachen
+    "key": "Schlüssel & Wertsachen",
+    "keyring": "Schlüssel & Wertsachen",
+    "necklace": "Schlüssel & Wertsachen",
+    "ring": "Schlüssel & Wertsachen",
+    "bracelet": "Schlüssel & Wertsachen",
+    "watch": "Schlüssel & Wertsachen",
+    "coin": "Schlüssel & Wertsachen",
+    # Sportbekleidung
+    "sports shoe": "Sportbekleidung",
+    "sneaker": "Sportbekleidung",
+    "running shoe": "Sportbekleidung",
+    "football helmet": "Sportbekleidung",
+    "baseball glove": "Sportbekleidung",
+    "tennis ball": "Sportbekleidung",
+    "volleyball": "Sportbekleidung",
+    "basketball": "Sportbekleidung",
+    "swimming trunks": "Sportbekleidung",
+    "tracksuit": "Sportbekleidung",
+}
 
-def get_class_labels():
-    if LABELS_FILE.exists():
-        try:
-            with open(LABELS_FILE, "r", encoding="utf-8") as f:
-                lines = [l.strip() for l in f.readlines() if l.strip()]
-            labels = []
-            for line in lines:
-                parts = line.split(" ", 1)
-                labels.append(parts[1] if len(parts) > 1 else parts[0])
-            if labels:
-                return labels
-        except Exception:
-            pass
-    return ["Kleidung & Textilien", "Trinkflaschen & Brotdosen", "Elektronik & Kabel", "Rucksäcke & Taschen"]
+@st.cache_resource(show_spinner=False)
+def load_mobilenet_model():
+    """Lädt vortrainiertes MobileNetV2 (ImageNet)."""
+    try:
+        import tensorflow as tf
+        from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
+        model = MobileNetV2(weights="imagenet")
+        return model, preprocess_input, decode_predictions
+    except Exception as e:
+        return None
 
 def analyze_image_ai(pil_image: Image.Image):
     """
-    Intelligente Erkennungs-Pipeline:
-    1. Versucht echtes Keras/TF Modell falls installiert
-    2. Fallback: Direkte Inferenz mit h5py und Gewichten aus keras_model.h5
-    3. Fallback auf Bild-Analyse (Farbe, Seitenverhältnis, Detail-Features)
+    KI-Erkennung mit MobileNetV2 (öffentlich, vortrainiert).
+    Fallback: Heuristik (falls TensorFlow nicht verfügbar).
     """
-    labels = get_class_labels()
-
-    # 1. Option: TensorFlow falls vorhanden
-    try:
-        import tensorflow.keras as keras
-        if Path("keras_model.h5").exists():
-            model = keras.models.load_model("keras_model.h5", compile=False)
+    # Versuche MobileNetV2
+    mobilenet_result = load_mobilenet_model()
+    if mobilenet_result is not None:
+        model, preprocess_input, decode_predictions = mobilenet_result
+        try:
             size = (224, 224)
             image = ImageOps.fit(pil_image, size, Image.Resampling.LANCZOS)
-            image_array = np.asarray(image)
-            normalized_image_array = (image_array.astype(np.float32) / 127.5) - 1
-            data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
-            data[0] = normalized_image_array
-            preds = model.predict(data, verbose=0)[0]
-            best_idx = int(np.argmax(preds))
-            conf = float(preds[best_idx])
-            cat_name = labels[best_idx] if best_idx < len(labels) else CATEGORIES[0]
-            matched_cat = next((c for c in CATEGORIES if c.lower() in cat_name.lower() or cat_name.lower() in c.lower()), cat_name)
-            return matched_cat, conf, "TensorFlow Keras (H5 Native)"
-    except Exception:
-        pass
+            img_array = np.asarray(image, dtype=np.float32)
+            img_array = np.expand_dims(img_array, axis=0)
+            img_array = preprocess_input(img_array)
 
-    # 2. Option: H5-Weight-basierte Klassifikation mit Feature-Extraktion
-    try:
-        import h5py
-        if Path("keras_model.h5").exists():
-            with h5py.File("keras_model.h5", "r") as f:
-                s7 = f["model_weights"]["sequential_7"]
-                w1 = s7["dense_Dense3"]["kernel:0"][:]
-                b1 = s7["dense_Dense3"]["bias:0"][:]
-                w2 = s7["dense_Dense4"]["kernel:0"][:]
+            preds = model.predict(img_array, verbose=0)
+            decoded = decode_predictions(preds, top=5)[0]  # Top-5 Klassen
 
-                # Feature-Synthese aus dem Eingabebild
-                rgb = pil_image.convert("RGB").resize((64, 64))
-                arr = np.asarray(rgb, dtype=np.float32) / 127.5 - 1.0
-                
-                # Erzeuge 1280 dimensionale Repräsentation
-                features = np.zeros((1, 1280), dtype=np.float32)
-                ch_means = arr.mean(axis=(0, 1))
-                ch_stds = arr.std(axis=(0, 1))
-                features[0, :3] = ch_means
-                features[0, 3:6] = ch_stds
-                # Histogramme für reichhaltigere Signatur
-                for c in range(3):
-                    hist, _ = np.histogram(arr[:, :, c], bins=64, range=(-1, 1), density=True)
-                    features[0, 6 + c*64 : 6 + (c+1)*64] = hist
+            # Suche die erste Klasse, die wir auf eine Kategorie mappen können
+            for _, class_name, prob in decoded:
+                class_name_lower = class_name.lower().replace("_", " ")
+                if class_name_lower in IMAGENET_CLASS_TO_CATEGORY:
+                    category = IMAGENET_CLASS_TO_CATEGORY[class_name_lower]
+                    return category, float(prob), "MobileNetV2 (ImageNet)"
 
-                # Forward-Pass durch die trainierten Dense-Schichten des H5-Modells
-                hidden = np.maximum(0, np.dot(features, w1) + b1)
-                logits = np.dot(hidden, w2)
-                exp_logits = np.exp(logits - np.max(logits))
-                probs = (exp_logits / np.sum(exp_logits))[0]
+            # Wenn keine passende Klasse gefunden, nehme die beste mit "Sonstiges"
+            best_class = decoded[0][1].lower().replace("_", " ")
+            return "Sonstiges", float(decoded[0][2]), "MobileNetV2 (ImageNet, keine Zuordnung)"
+        except Exception:
+            pass
 
-                best_idx = int(np.argmax(probs))
-                conf = float(probs[best_idx])
-                # Sanity check auf Mindest-Konfidenz
-                if conf > 0.4 and best_idx < len(labels):
-                    return labels[best_idx], min(0.96, conf + 0.35), "H5 Trained Dense Pipeline"
-    except Exception:
-        pass
-
-    # 3. Option: Heuristik auf Farb- & Geometriedaten
+    # Heuristik-Fallback
     rgb_img = pil_image.convert("RGB")
     w, h = rgb_img.size
     aspect_ratio = w / float(h)
@@ -509,10 +524,10 @@ def analyze_image_ai(pil_image: Image.Image):
         suggested = "Rucksäcke & Taschen"
         confidence = 0.85
     else:
-        suggested = labels[0] if labels else "Kleidung & Textilien"
+        suggested = "Kleidung & Textilien"
         confidence = 0.78
 
-    return suggested, confidence, "Vision-Feature-Engine (Auto-Classifier)"
+    return suggested, confidence, "Vision-Feature-Engine (Heuristik)"
 
 # =============================================================================
 # 4. SIDEBAR: AUTHENTIFIZIERUNG & METRIKEN
@@ -680,16 +695,12 @@ with tab_katalog:
                         </div>
                         """, unsafe_allow_html=True)
 
-                        with st.expander("Details, Abholort & QR"):
+                        with st.expander("Details, Abholort"):
                             st.write(f"**Kategorie:** {item.get('kategorie')}")
                             st.write(f"**Beschreibung:** {item.get('beschreibung')}")
                             st.write(f"**Abholort:** {item.get('abgabeort')}")
                             st.write(f"**Gemeldet von:** {item.get('kontakt_kuerzel')} ({item.get('finder_rolle')})")
                             st.write(f"**Aufbewahrungsfrist:** {item.get('datum_ablauf')}")
-
-                            # Dynamischer QR Code zum schnellen Abgleich
-                            qr_img = generate_qr_image(item)
-                            st.image(qr_img, width=160, caption="Fund-QR-Code für Hausmeister")
 
 # =============================================================================
 # TAB 2: ERFASSEN (FORM - MIT FOTO UPLOAD + KI ANALYSE AUS DER SKIZZE)
@@ -724,6 +735,10 @@ with tab_erfassen:
             with st.spinner("🤖 KI analysiert das Fundstück..."):
                 ai_category, ai_confidence, ai_engine = analyze_image_ai(uploaded_pil)
 
+            # Sicherstellen, dass die Kategorie gültig ist
+            if ai_category not in CATEGORIES:
+                ai_category = "Sonstiges"
+
             st.markdown(f"""
             <div class="ai-box">
                 <div class="ai-box-title">✨ KI-Erkennungsergebnis</div>
@@ -741,9 +756,16 @@ with tab_erfassen:
         with st.form("form_add_item", clear_on_submit=True):
             in_titel = st.text_input("Titel des Gegenstands*", placeholder="z. B. Blaue Nike Sporttasche")
 
-            # Automatische Vorauswahl durch KI-Vorschlag
-            default_cat_idx = CATEGORIES.index(ai_category) if ai_category in CATEGORIES else 0
-            in_kategorie = st.selectbox("Kategorie bestätigen", CATEGORIES, index=default_cat_idx)
+            # KI-Kategorie wird automatisch übernommen – keine manuelle Auswahl
+            if ai_category not in CATEGORIES:
+                ai_category = "Sonstiges"
+
+            st.markdown(f"""
+            <div style="background:#f1f5f9; padding:10px 14px; border-radius:8px; border-left:4px solid #0f172a; margin-bottom:10px;">
+                <span style="font-weight:700;">🔍 KI-Kategorie:</span> {ai_category}
+                <span style="color:#64748b; font-size:0.85rem;">(automatisch erkannt)</span>
+            </div>
+            """, unsafe_allow_html=True)
 
             in_fundort = st.selectbox("Wo wurde es gefunden?*", LOCATIONS)
             in_abgabeort = st.text_input("Aktueller Aufbewahrungsort*", value="Hausmeisterbüro (Raum 001)")
@@ -774,7 +796,7 @@ with tab_erfassen:
 
                     parsed_tags = [t.strip() for t in in_tags.split(",") if t.strip()]
                     if not parsed_tags:
-                        parsed_tags = [in_kategorie.split(" ")[0]]
+                        parsed_tags = [ai_category.split(" ")[0]]
 
                     today_str = datetime.date.today().strftime("%Y-%m-%d")
                     expiry_str = (datetime.date.today() + datetime.timedelta(days=90)).strftime("%Y-%m-%d")
@@ -782,7 +804,7 @@ with tab_erfassen:
                     new_item = {
                         "id": new_id,
                         "titel": in_titel.strip(),
-                        "kategorie": in_kategorie,
+                        "kategorie": ai_category,  # <-- Automatisch übernommen
                         "fundort": in_fundort,
                         "abgabeort": in_abgabeort.strip(),
                         "kontakt_kuerzel": in_kuerzel.strip().upper(),
