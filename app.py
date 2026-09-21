@@ -155,7 +155,8 @@ def file_uri(path_str, max_dim=1400):
 
 def hero_uris():
     uris = []
-    for n in ["hero_1.png", "hero_2.png", "hero_3.png"]:
+    for n in ["hero_1.png", "hero_2.png", "hero_3.png", "hero_4.png",
+              "hero_5.png", "hero_6.png", "hero_7.png"]:
         p = Path("assets") / n
         if not p.exists():
             continue
@@ -844,11 +845,13 @@ def _extract(ui, tag_open, tag_close):
     b = ui.index(tag_close, a)
     return ui[a:b]
 
+_head_part = _extract(UI, "<head>", "</head>")
 _css_part = _extract(UI, "<style>", "</style>")
 _body_part = _extract(UI, "<body>", "</body>")
 _script_part = _extract(UI, "<script>", "</script>")
 # blank lines wuerden markdown-it die html-bloecke zerreissen lassen
 _body_part = _body_part.replace("\n\n", "\n")
+st.markdown(_head_part, unsafe_allow_html=True)
 st.markdown(f"<style>{_css_part}</style>", unsafe_allow_html=True)
 st.markdown(_body_part, unsafe_allow_html=True)
 st.markdown(f"<script>{_script_part}</script>", unsafe_allow_html=True)
