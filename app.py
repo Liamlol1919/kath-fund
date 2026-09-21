@@ -142,6 +142,17 @@ def img_uri(filename, max_dim=420):
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
+def file_uri(path_str, max_dim=1400):
+    p = Path(path_str)
+    if not p.exists():
+        return ""
+    img = Image.open(p)
+    img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
 def logo_top_uri():
     p = Path("assets/logo_top.png")
     if not p.exists():
@@ -388,167 +399,210 @@ st.session_state["flash"] = ""
 
 wordmark = wordmark_uri()
 logo_top = logo_top_uri()
+ipad_frame = file_uri("assets/ipad.png")
+logo_main = file_uri("assets/logo_new.png", 900) or logo_top
 data_json = json.dumps({"items": items_json, "wordmark": wordmark, "logoTop": logo_top,
                         "categories": CATEGORIES, "claims": len(claims_json)},
                        ensure_ascii=False)
 
 UI = r"""
 <!doctype html>
-<html lang="de" data-theme="kfund">
+<html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  [data-theme="kfund"] {
-    --p: 43% 0.16 25;  --pc: 96% 0.03 25;
-    --b1: 97% 0.01 90; --b2: 100% 0 0; --bc: 22% 0.02 70;
-    --r: 45% 0.09 150; --rc: 96% 0.02 150;
+  :root {
+    --bg: #FAFAF9; --card: #FFFFFF; --fg: #18181B; --muted: #71717A;
+    --line: #E4E4E7; --line-dash: #D4D4D8; --accent: #DC2626; --accent-fg: #FEF2F2;
+    --ok: #16A34A; --info: #2563EB; --warn: #D97706;
   }
-  body { font-family: 'Inter', system-ui, sans-serif; background: #F7F5F0; }
-  .mono { font-family: ui-monospace, 'IBM Plex Mono', monospace; }
-  .card-hover { transition: transform .15s ease, box-shadow .15s ease; }
-  .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,.10); }
+  * { -webkit-font-smoothing: antialiased; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #101014;
+         color: var(--fg); margin: 0; }
+  .app { background: var(--bg); display: flex; flex-direction: column; height: 100%; }
+
+  /* ---------- iPad-Rahmen (nur Laptop/Desktop) ---------- */
+  .stage { min-height: 100vh; display: flex; align-items: center; justify-content: center;
+           padding: 24px 0; background:
+             radial-gradient(1200px 600px at 20% -10%, #23232B 0%, transparent 60%),
+             radial-gradient(1000px 700px at 110% 110%, #1B2B33 0%, transparent 55%), #101014; }
+  .device { position: relative; height: min(94vh, 1100px); aspect-ratio: 870 / 1289; }
+  .device-frame { position: absolute; inset: 0; width: 100%; height: 100%;
+                  background-size: 100% 100%; pointer-events: none; z-index: 10; }
+  .device-screen { position: absolute; left: 2.5%; top: 10.3%; right: 6.1%; bottom: 10.4%;
+                   border-radius: 14px; overflow: hidden; background: var(--bg); }
+  @media (max-width: 767px) {
+    .stage { padding: 0; background: var(--bg); }
+    .device { height: 100vh; aspect-ratio: auto; width: 100vw; }
+    .device-frame { display: none; }
+    .device-screen { position: fixed; inset: 0; border-radius: 0; }
+  }
+
+  /* ---------- Typo & Basis (shadcn-Vibe) ---------- */
+  .lbl { font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+         color: var(--muted); }
+  h1 { font-weight: 800; letter-spacing: -.03em; }
+  .dots { background-image: radial-gradient(#D4D4D8 1px, transparent 1.2px); background-size: 16px 16px; }
+  .icard { background: var(--card); border: 1px solid var(--line); border-radius: .9rem; }
+  .icard-hover { transition: all .16s ease; }
+  .icard-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(24,24,27,.08);
+                       border-color: #C8C8CC; }
   .clamp2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  .scroller { display:flex; gap:1rem; overflow-x:auto; padding:.4rem .2rem 1rem; scroll-snap-type:x proximity; }
-  .scroller > div { flex:0 0 240px; scroll-snap-align:start; }
-  .scroller::-webkit-scrollbar { height:6px; }
-  .scroller::-webkit-scrollbar-thumb { background:#D6D1C6; border-radius:3px; }
-  dialog::backdrop { background: rgba(20,17,12,.45); }
+  .scroller { display:flex; gap:.75rem; overflow-x:auto; padding:.25rem .15rem .85rem;
+              scroll-snap-type:x proximity; scrollbar-width: thin; }
+  .scroller > * { flex:0 0 200px; scroll-snap-align:start; }
+  .scroller::-webkit-scrollbar { height: 5px; }
+  .scroller::-webkit-scrollbar-thumb { background:#D4D4D8; border-radius: 3px; }
+  dialog::backdrop { background: rgba(24,24,27,.5); backdrop-filter: blur(2px); }
+  .btn-accent { background: var(--accent); color: #fff; border: none; }
+  .btn-accent:hover { background: #B91C1C; color:#fff; }
+  .chip { border:1px solid var(--line); background:#fff; color:var(--fg); border-radius:999px;
+          padding: .3rem .8rem; font-size:.78rem; font-weight:500; }
+  .chip.on { background: var(--fg); color:#fff; border-color: var(--fg); }
+  svg.lucide { width: 1.15em; height: 1.15em; vertical-align: -0.2em; }
 </style>
 </head>
-<body class="min-h-screen">
+<body>
+<div class="stage">
+<div class="device">
+  <div class="device-screen">
+  <div class="app">
 
-<!-- ============ DRAWER (Sidebar) ============ -->
-<div class="drawer">
-  <input id="drawerToggle" type="checkbox" class="drawer-toggle"/>
-  <div class="drawer-content">
+  <!-- ============ TOPBAR ============ -->
+  <div class="bg-white/90 backdrop-blur border-b border-[var(--line)] sticky top-0 z-30 flex items-center gap-2 px-3 py-2">
+    <button class="btn btn-ghost btn-sm btn-square" onclick="drawer.open()">
+      <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <img src="__LOGO__" class="h-7 w-auto mx-auto" alt="kath.fund">
+    <button class="btn btn-accent btn-sm ml-auto" onclick="openReport('camera')">＋ Melden</button>
+  </div>
 
-    <!-- ============ TOPBAR ============ -->
-    <div class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-40 shadow-sm px-2 md:px-6">
-      <div class="flex-none">
-        <label for="drawerToggle" class="btn btn-ghost btn-square" aria-label="Menü">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-        </label>
-      </div>
-      <div class="flex-1 flex justify-center">
-        <img src="__WORDMARK__" class="h-8 md:h-10 w-auto" alt="kath.fund">
-      </div>
-      <div class="flex-none flex items-center gap-2">
-        <span class="badge badge-outline hidden sm:inline-flex mono" id="openCount"></span>
-        <a class="btn btn-primary btn-sm md:btn" onclick="openReport()">📷 Fund melden</a>
-      </div>
+  <!-- flash -->
+  <div id="flash" class="hidden px-4 pt-3">
+    <div class="icard px-4 py-3 flex items-center gap-2 text-sm border-[var(--ok)]/40 bg-[#F0FDF4]">
+      <svg class="lucide text-[var(--ok)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+      <span id="flashText"></span>
+    </div>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <div id="view-home" class="flex-1 overflow-y-auto px-4 pb-10">
+    <div class="dots rounded-2xl -mx-4 px-4 pt-7 pb-5 text-center">
+      <img src="__LOGO__" class="w-52 md:w-60 mx-auto" alt="kath.fund">
     </div>
 
-    <!-- ============ FLASH ============ -->
-    <div id="flash" class="hidden max-w-5xl mx-auto px-4 pt-4">
-      <div class="alert alert-success shadow"><span id="flashText"></span></div>
-    </div>
+    <form class="join w-full mt-4" onsubmit="doSearch(event)">
+      <input id="homeQ" class="input input-bordered join-item w-full bg-white" style="border-radius:.65rem 0 0 .65rem"
+             placeholder="Was suchst du? Jacke, AirPods, #1002 …">
+      <button class="btn join-item" style="border-radius:0 .65rem .65rem 0">
+        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+    </form>
 
-    <!-- ============ VIEW: HOME ============ -->
-    <div id="view-home" class="max-w-5xl mx-auto px-4 pb-16">
-      <div class="text-center pt-6 md:pt-8 pb-2">
-        <img src="__LOGOTOP__" class="w-64 md:w-80 mx-auto" alt="kath.fund">
-      </div>
-
-      <!-- Suche -->
-      <form class="join w-full mt-4" onsubmit="doSearch(event)">
-        <input id="homeQ" class="input input-bordered join-item input-lg w-full bg-base-100"
-               placeholder="🔍 Jacke, AirPods, Schlüsselbund, #1002 …">
-        <button class="btn btn-neutral join-item input-lg">Suchen</button>
-      </form>
-
-      <!-- CTA: Etwas gefunden? -->
-      <div class="card bg-base-100 shadow-lg border border-base-200 mt-6 overflow-hidden">
-        <div class="card-body p-6 md:p-10 items-center text-center gap-3">
-          <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-            <span class="text-4xl">🎒</span>
-          </div>
-          <h2 class="card-title text-2xl md:text-3xl justify-center">Etwas gefunden?</h2>
-          <p class="text-base-content/60 max-w-md">Mach ein Foto oder lade eins hoch — die Kategorie wird
-          automatisch erkannt und du kannst das Fundstück direkt eintragen.</p>
-          <div class="flex flex-col sm:flex-row gap-3 mt-2 w-full sm:w-auto">
-            <a class="btn btn-primary btn-lg" onclick="openReport('camera')">📷 Foto aufnehmen</a>
-            <a class="btn btn-outline btn-lg" onclick="openReport('upload')">📄 Datei hochladen</a>
-          </div>
+    <!-- Zwei Wege -->
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <div class="icard icard-hover p-4 cursor-pointer" onclick="openReport('camera')">
+        <div class="w-10 h-10 rounded-xl bg-[var(--accent-fg)] flex items-center justify-center text-[var(--accent)]">
+          <svg class="lucide" style="width:1.4em;height:1.4em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg>
         </div>
+        <b class="block mt-2 text-sm">Etwas gefunden?</b>
+        <span class="text-xs text-[var(--muted)]">Foto → automatisch eintragen</span>
       </div>
-
-      <!-- Kategorie-Scroller -->
-      <h2 class="text-xl font-bold mt-8 mb-1">Kategorien</h2>
-      <p class="text-sm text-base-content/50 mb-2">Von Elektronik bis Klamotten — tippen zum Filtern</p>
-      <div class="scroller" id="scrollerCats"></div>
-
-      <!-- Neu -->
-      <h2 class="text-xl font-bold mt-8 mb-1">Neu im Fundbüro</h2>
-      <p class="text-sm text-base-content/50 mb-2">Zuletzt eingegegangene Fundstücke</p>
-      <div class="scroller" id="scrollerNew"></div>
-
-      <!-- Kategorien-Liste -->
-      <h2 class="text-xl font-bold mt-8 mb-1">Alle Bereiche</h2>
-      <p class="text-sm text-base-content/50 mb-3">Direkt zum gefilterten Verzeichnis</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="catList"></div>
+      <div class="icard icard-hover p-4 cursor-pointer" onclick="goSearchAll()">
+        <div class="w-10 h-10 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-[var(--info)]">
+          <svg class="lucide" style="width:1.4em;height:1.4em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M8.5 11h5"/></svg>
+        </div>
+        <b class="block mt-2 text-sm">Etwas verloren?</b>
+        <span class="text-xs text-[var(--muted)]">Verzeichnis durchsuchen</span>
+      </div>
     </div>
 
-    <!-- ============ VIEW: SEARCH ============ -->
-    <div id="view-search" class="max-w-5xl mx-auto px-4 pb-16 hidden">
-      <button class="btn btn-ghost btn-sm mt-4 -ml-3" onclick="show('home')">← Start</button>
-      <h1 class="text-2xl font-bold mt-2" id="searchTitle">Alle Fundstücke</h1>
-      <form class="join w-full mt-3" onsubmit="doSearchFromView(event)">
-        <input id="searchQ" class="input input-bordered join-item w-full bg-base-100"
-               placeholder="🔍 Suchen oder #Belegnummer …">
-        <button class="btn btn-neutral join-item">Los</button>
-      </form>
-      <div class="flex flex-wrap gap-2 mt-4" id="catChips"></div>
-      <div class="flex flex-wrap gap-2 mt-2" id="statusChips"></div>
-      <p class="text-sm text-base-content/50 mt-4" id="resultCount"></p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4" id="searchGrid"></div>
-    </div>
+    <!-- Kategorien -->
+    <p class="lbl mt-6 mb-2">Kategorien</p>
+    <div class="scroller" id="scrollerCats"></div>
 
-    <!-- ============ VIEW: DETAIL ============ -->
-    <div id="view-item" class="max-w-4xl mx-auto px-4 pb-16 hidden">
-      <button class="btn btn-ghost btn-sm mt-4 -ml-3" onclick="backFromItem()">← Zurück</button>
-      <div id="itemDetail" class="mt-3"></div>
-    </div>
+    <!-- Neu -->
+    <p class="lbl mt-3 mb-2">Neu im Fundbüro</p>
+    <div class="scroller" id="scrollerNew"></div>
+
+    <!-- Alle Bereiche -->
+    <p class="lbl mt-3 mb-2">Alle Bereiche</p>
+    <div class="grid grid-cols-1 gap-2" id="catList"></div>
   </div>
 
-  <!-- ============ DRAWER-SIDEBAR ============ -->
-  <div class="drawer-side z-50">
-    <label for="drawerToggle" class="drawer-overlay" aria-label="Schließen"></label>
-    <aside class="bg-base-100 min-h-full w-72 p-4 border-r border-base-300">
-      <img src="__LOGOTOP__" class="w-40 mx-auto mb-4" alt="kath.fund">
-      <ul class="menu w-full gap-1">
-        <li><a onclick="closeDrawer();show('home')"><b>🏠 Start</b></a></li>
-        <li><a onclick="closeDrawer();goSearchAll()"><b>🔍 Alle Fundstücke</b></a></li>
-        <li><a onclick="closeDrawer();openReport()">📷 Fund melden</a></li>
-      </ul>
-      <div class="divider my-2">Kategorien</div>
-      <ul class="menu w-full gap-0.5" id="drawerCats"></ul>
-      <div class="divider my-2">Status</div>
-      <ul class="menu w-full gap-0.5" id="drawerStatus"></ul>
-      <div class="divider my-2">Kennzahlen</div>
-      <div id="statDrawer"></div>
-      <p class="text-xs text-base-content/40 mt-4 text-center">Katharineum zu Lübeck · Fundbüro</p>
-    </aside>
+  <!-- ============ SEARCH ============ -->
+  <div id="view-search" class="flex-1 overflow-y-auto px-4 pb-10 hidden">
+    <button class="btn btn-ghost btn-sm mt-3 -ml-2" onclick="show('home')">
+      <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg> Start
+    </button>
+    <h1 class="text-xl mt-1" id="searchTitle">Alle Fundstücke</h1>
+    <form class="join w-full mt-3" onsubmit="doSearchFromView(event)">
+      <input id="searchQ" class="input input-bordered join-item w-full bg-white" style="border-radius:.65rem 0 0 .65rem" placeholder="Suchen oder #Belegnummer …">
+      <button class="btn join-item" style="border-radius:0 .65rem .65rem 0">
+        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+    </form>
+    <div class="flex flex-wrap gap-1.5 mt-3" id="catChips"></div>
+    <div class="flex flex-wrap gap-1.5 mt-2" id="statusChips"></div>
+    <p class="text-xs text-[var(--muted)] mt-4" id="resultCount"></p>
+    <div class="grid grid-cols-2 gap-3 mt-2" id="searchGrid"></div>
   </div>
-</div>
 
-<!-- ============ MODAL: BEANSPRUCHEN ============ -->
+  <!-- ============ ITEM ============ -->
+  <div id="view-item" class="flex-1 overflow-y-auto px-4 pb-10 hidden">
+    <button class="btn btn-ghost btn-sm mt-3 -ml-2" onclick="backFromItem()">
+      <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg> Zurück
+    </button>
+    <div id="itemDetail" class="mt-2"></div>
+  </div>
+
+  </div><!-- /app -->
+  </div><!-- /screen -->
+
+  <!-- iPad-Rahmen als background-image -->
+  <div class="device-frame" style="background-image:url('__IPAD__')"></div>
+</div><!-- /device -->
+</div><!-- /stage -->
+
+<!-- ============ DRAWER ============ -->
+<dialog id="drawer" class="modal modal-start">
+  <div class="modal-box max-w-xs p-0 rounded-r-2xl rounded-l-none overflow-hidden">
+    <div class="p-4 border-b border-[var(--line)]">
+      <img src="__LOGO__" class="w-32" alt="kath.fund">
+      <p class="text-xs text-[var(--muted)] mt-2">Katharineum zu Lübeck</p>
+    </div>
+    <div class="p-3 space-y-0.5">
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#F4F4F5] text-sm font-medium" onclick="drawer.close();show('home')">
+        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg> Start</button>
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#F4F4F5] text-sm font-medium" onclick="drawer.close();goSearchAll()">
+        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg> Alle Fundstücke</button>
+      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#F4F4F5] text-sm font-medium" onclick="drawer.close();openReport('camera')">
+        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg> Fund melden</button>
+    </div>
+    <div class="px-4 pt-2 pb-1 lbl">Kategorien</div>
+    <div class="px-3 pb-2 max-h-56 overflow-y-auto" id="drawerCats"></div>
+    <div class="px-4 pt-2 pb-1 lbl">Kennzahlen</div>
+    <div class="px-4 pb-4 grid grid-cols-2 gap-2" id="statDrawer"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- ============ CLAIM MODAL ============ -->
 <dialog id="claimModal" class="modal">
-  <div class="modal-box max-w-lg">
-    <h3 class="font-bold text-lg">Das ist meins — Anspruch melden</h3>
-    <p class="text-sm text-base-content/60 mt-1" id="claimItemLabel"></p>
-    <div class="py-3 space-y-3">
-      <input id="claimName" class="input input-bordered w-full" placeholder="Name und Klasse* (z. B. Julia Koch, 9b)">
-      <textarea id="claimProof" class="textarea textarea-bordered w-full h-28"
-        placeholder="Nachweis*: Was weiß nur die rechtmäßige Besitzerin / der Besitzer? Inhalt, Gravur, Initialen, Sperrbildschirm …"></textarea>
+  <div class="modal-box max-w-md p-5">
+    <h3 class="font-bold text-lg">Das ist meins</h3>
+    <p class="text-sm text-[var(--muted)] mt-0.5" id="claimItemLabel"></p>
+    <div class="pt-3 space-y-3">
+      <input id="claimName" class="input input-bordered w-full bg-white" placeholder="Name und Klasse* (z. B. Julia Koch, 9b)">
+      <textarea id="claimProof" class="textarea textarea-bordered w-full h-24 bg-white"
+        placeholder="Nachweis*: Was weiß nur die Besitzerin / der Besitzer? Inhalt, Gravur, Initialen …"></textarea>
     </div>
     <div class="modal-action">
-      <button class="btn btn-ghost" onclick="claimModal.close()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="submitClaim()">Anspruch einreichen</button>
+      <button class="btn btn-ghost btn-sm" onclick="claimModal.close()">Abbrechen</button>
+      <button class="btn btn-accent btn-sm" onclick="submitClaim()">Anspruch einreichen</button>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -557,36 +611,31 @@ UI = r"""
 <script>
 const DATA = __DATA__;
 const items = DATA.items;
-let currentView = 'home';
-let lastGrid = null;
-let filterCat = 'Alle';
-let filterStatus = 'Alle';
+let currentView = 'home', lastGrid = null, filterCat = 'Alle', filterStatus = 'Alle';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
 const KAT_ICON = {
-  "Kleidung & Textilien": "🧥", "Trinkflaschen & Brotdosen": "🥤",
-  "Rucksäcke & Taschen": "🎒", "Elektronik & Kabel": "🎧",
-  "Schlüssel & Wertsachen": "🔑", "Schulmaterial & Bücher": "📚",
-  "Sportbekleidung": "👟", "Sonstiges": "📦",
+  "Kleidung & Textilien": '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23Z"/>',
+  "Trinkflaschen & Brotdosen": '<path d="M15 2h2a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h2"/><path d="M10 2v20"/><path d="M7 8h3M7 12h3M7 16h3"/>',
+  "Rucksäcke & Taschen": '<path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5"/>',
+  "Elektronik & Kabel": '<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm18 0h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-5Z"/><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
+  "Schlüssel & Wertsachen": '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+  "Schulmaterial & Bücher": '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
+  "Sportbekleidung": '<path d="m8 3 4 8 5-5 5 15H2L8 3Z"/>',
+  "Sonstiges": '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
 };
+const katSvg = (kat, cls='lucide') =>
+  `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${KAT_ICON[kat]||KAT_ICON['Sonstiges']}</svg>`;
 
-function showFlash(t) {
-  if (!t) return;
-  $('#flashText').textContent = t;
-  $('#flash').classList.remove('hidden');
-}
-function show(v) {
-  currentView = v;
+function showFlash(t) { if (!t) return;
+  $('#flashText').textContent = t; $('#flash').classList.remove('hidden'); }
+function show(v) { currentView = v;
   ['home','search','item'].forEach(x => $('#view-'+x).classList.toggle('hidden', x !== v));
-  window.scrollTo(0,0);
-}
-function closeDrawer() { $('#drawerToggle').checked = false; }
+  $('#view-'+v).scrollTop = 0; window.scrollTo(0,0); }
 function openReport(mode) { window.parent.location.search = '?view=report' + (mode === 'camera' ? '&mode=camera' : ''); }
-
 function submitClaim() {
-  const name = $('#claimName').value.trim();
-  const proof = $('#claimProof').value.trim();
+  const name = $('#claimName').value.trim(), proof = $('#claimProof').value.trim();
   const iid = claimModal.dataset.item;
   if (!name || !proof) { $('#claimName').classList.toggle('input-error', !name);
                          $('#claimProof').classList.toggle('textarea-error', !proof); return; }
@@ -594,68 +643,58 @@ function submitClaim() {
 }
 
 function statusBadge(s) {
-  const map = { 'Offen':'badge-warning', 'Beansprucht':'badge-info',
-                'Abgeholt':'badge-success', 'Entsorgt':'badge-error' };
-  return `<span class="badge badge-sm ${map[s]||'badge-ghost'}">${esc(s)}</span>`;
+  const map = { 'Offen':'bg-[#FEF3C7] text-[#92400E]', 'Beansprucht':'bg-[#DBEAFE] text-[#1E40AF]',
+                'Abgeholt':'bg-[#DCFCE7] text-[#166534]', 'Entsorgt':'bg-[#FEE2E2] text-[#991B1B]' };
+  return `<span class="text-[.62rem] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${map[s]||'bg-[#F4F4F5] text-[var(--muted)]'}">${esc(s)}</span>`;
 }
+
 function card(i) {
   const fig = i.img
-    ? `<figure><img src="${i.img}" class="h-40 w-full object-cover" alt="${esc(i.titel)}"></figure>`
-    : `<figure class="h-40 w-full bg-base-200 flex flex-col items-center justify-center gap-1">
-         <span class="text-4xl">${i.icon}</span>
-         <span class="text-xs text-base-content/50">${esc(i.kategorie)}</span></figure>`;
-  const neu = i.neu ? `<span class="badge badge-sm badge-primary">Neu</span>` : '';
+    ? `<figure class="h-32 overflow-hidden"><img src="${i.img}" class="w-full h-full object-cover" alt=""></figure>`
+    : `<figure class="h-32 dots flex items-center justify-center text-[var(--muted)]">${katSvg(i.kategorie,'lucide')}<span style="width:2em;height:2em"></span></figure>`;
+  const neu = i.neu ? `<span class="text-[.62rem] font-semibold uppercase rounded-full px-2 py-0.5 bg-[var(--accent)] text-white">Neu</span>` : '';
   return `
-  <div class="card bg-base-100 shadow card-hover cursor-pointer" onclick="openItem(${i.id}, 'grid')">
+  <div class="icard icard-hover cursor-pointer overflow-hidden" onclick="openItem(${i.id},'grid')">
     ${fig}
-    <div class="card-body p-4 gap-1.5">
-      <h3 class="card-title text-base leading-snug clamp2">${esc(i.titel)}</h3>
-      <p class="text-xs text-base-content/50">📍 ${esc(i.fundort)} · ${esc(i.datum_fund)}</p>
-      <div class="flex flex-wrap gap-1.5 mt-1">${statusBadge(i.status)}${neu}</div>
+    <div class="p-3">
+      <b class="block text-[.88rem] leading-snug clamp2">${esc(i.titel)}</b>
+      <p class="text-[.68rem] text-[var(--muted)] mt-1">${esc(i.fundort)}</p>
+      <div class="flex flex-wrap gap-1 mt-2">${statusBadge(i.status)}${neu}</div>
     </div>
   </div>`;
 }
 
 function openItem(id, ctx) {
   lastGrid = ctx;
-  const i = items.find(x => x.id === id);
-  if (!i) return;
+  const i = items.find(x => x.id === id); if (!i) return;
   const claimable = i.status === 'Offen' || i.status === 'Beansprucht';
   const fig = i.img
-    ? `<img src="${i.img}" class="w-full rounded-box border border-base-300 object-cover">`
-    : `<div class="rounded-box bg-base-200 h-64 flex flex-col items-center justify-center gap-2">
-         <span class="text-6xl">${i.icon}</span><span class="text-sm text-base-content/50">${esc(i.kategorie)}</span></div>`;
-  const tags = (i.tags||[]).map(t=>`<span class="badge badge-ghost badge-sm">${esc(t)}</span>`).join('');
+    ? `<img src="${i.img}" class="w-full rounded-xl border border-[var(--line)] object-cover">`
+    : `<div class="rounded-xl border border-dashed border-[var(--line-dash)] h-56 dots flex items-center justify-center text-[var(--muted)]">${katSvg(i.kategorie,'lucide')}<span style="width:3.2em;height:3.2em"></span></div>`;
+  const tags = (i.tags||[]).map(t=>`<span class="text-[.68rem] rounded-full border border-[var(--line)] px-2 py-0.5">${esc(t)}</span>`).join('');
   $('#itemDetail').innerHTML = `
-  <div class="flex items-center gap-3 flex-wrap">
-    <h1 class="text-2xl md:text-3xl font-bold">${esc(i.titel)}</h1>
-    ${statusBadge(i.status)}${i.neu?'<span class="badge badge-primary badge-sm">Neu</span>':''}
+  <div class="flex items-center gap-2 flex-wrap mt-1">
+    <h1 class="text-lg md:text-xl">${esc(i.titel)}</h1>
+    ${statusBadge(i.status)}${i.neu?'<span class="text-[.62rem] font-semibold uppercase rounded-full px-2 py-0.5 bg-[var(--accent)] text-white">Neu</span>':''}
   </div>
-  <div class="grid md:grid-cols-2 gap-6 mt-4">
-    <div>${fig}
-      ${tags?`<div class="flex flex-wrap gap-1.5 mt-3">${tags}</div>`:''}
+  <div class="mt-3 space-y-3">
+    ${fig}
+    ${tags?`<div class="flex flex-wrap gap-1.5">${tags}</div>`:''}
+    <div class="icard p-4 space-y-2.5 text-sm">
+      <div class="flex justify-between"><span class="text-[var(--muted)]">Kategorie</span><b>${esc(i.kategorie)}</b></div>
+      <div class="flex justify-between"><span class="text-[var(--muted)]">Fundort</span><b>${esc(i.fundort)}</b></div>
+      <div class="flex justify-between"><span class="text-[var(--muted)]">Gefunden</span><b>${esc(i.datum_fund)}</b></div>
+      <div class="flex justify-between"><span class="text-[var(--muted)]">Lagerort</span><b>${esc(i.abgabeort)}</b></div>
+      <div class="flex justify-between"><span class="text-[var(--muted)]">Abholen bis</span><b>${esc(i.datum_ablauf)}</b></div>
+      <p class="text-xs text-[var(--muted)] border-t border-[var(--line)] pt-2.5 leading-relaxed">${esc(i.beschreibung)}</p>
     </div>
-    <div class="bg-base-100 border border-base-300 rounded-box shadow-sm p-5">
-      <dl class="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2.5 text-sm">
-        <dt class="text-base-content/50 uppercase text-[.68rem] tracking-wider pt-1">Kategorie</dt><dd class="font-semibold">${esc(i.kategorie)}</dd>
-        <dt class="text-base-content/50 uppercase text-[.68rem] tracking-wider pt-1">Fundort</dt><dd class="font-semibold">${esc(i.fundort)}</dd>
-        <dt class="text-base-content/50 uppercase text-[.68rem] tracking-wider pt-1">Gefunden</dt><dd class="font-semibold">${esc(i.datum_fund)}</dd>
-        <dt class="text-base-content/50 uppercase text-[.68rem] tracking-wider pt-1">Lagerort</dt><dd class="font-semibold">${esc(i.abgabeort)}</dd>
-        <dt class="text-base-content/50 uppercase text-[.68rem] tracking-wider pt-1">Abholen bis</dt><dd class="font-semibold">${esc(i.datum_ablauf)}</dd>
-      </dl>
-      <div class="mt-4 border-t border-base-200 pt-3">
-        <p class="text-[.68rem] uppercase tracking-wider text-base-content/50 mb-1">Beschreibung</p>
-        <p class="text-sm">${esc(i.beschreibung)}</p>
-      </div>
-      ${claimable
-        ? `<button class="btn btn-primary w-full mt-5" onclick="openClaim(${i.id})">Das ist meins — Anspruch melden</button>`
-        : `<p class="text-sm text-base-content/40 mt-5">Dieses Fundstück wurde bereits abgeholt.</p>`}
-    </div>
+    ${claimable
+      ? `<button class="btn btn-accent w-full" onclick="openClaim(${i.id})">Das ist meins — Anspruch melden</button>`
+      : `<p class="text-center text-xs text-[var(--muted)]">Bereits abgeholt.</p>`}
   </div>`;
   show('item');
 }
 function backFromItem() { show(lastGrid === 'search' ? 'search' : 'home'); }
-
 function openClaim(id) {
   const i = items.find(x => x.id === id);
   claimModal.dataset.item = id;
@@ -669,113 +708,88 @@ function matches(i) {
   if (filterCat !== 'Alle' && i.kategorie !== filterCat) return false;
   if (filterStatus !== 'Alle' && i.status !== filterStatus) return false;
   if (!q) return true;
-  const hay = [i.titel, i.beschreibung, i.fundort, i.kategorie, ('#'+i.id),
-               ...(i.tags||[])].join(' ').toLowerCase();
+  const hay = [i.titel, i.beschreibung, i.fundort, i.kategorie, ('#'+i.id), ...(i.tags||[])].join(' ').toLowerCase();
   return hay.includes(q);
 }
 function renderSearch() {
   const list = items.filter(matches).sort((a,b)=> b.datum_fund.localeCompare(a.datum_fund));
-  $('#resultCount').innerHTML = `<b>${list.length}</b> Treffer`;
+  $('#resultCount').innerHTML = `<b>${list.length}</b> Treffer${filterCat!=='Alle'?' · '+esc(filterCat):''}`;
   $('#searchGrid').innerHTML = list.length
     ? list.map(i => card(i)).join('')
-    : `<div class="col-span-full text-center border border-dashed border-base-300 rounded-box py-10 text-base-content/50">
+    : `<div class="col-span-full icard border-dashed py-10 text-center text-sm text-[var(--muted)]">
          Keine Treffer — anderen Suchbegriff probieren.</div>`;
-}
-function chip(label, active, onclick) {
-  return `<button class="btn btn-sm rounded-full ${active?'btn-neutral':'btn-outline btn-ghost'}" onclick="${onclick}">${label}</button>`;
 }
 function renderChips() {
   const j = (s) => s.replace(/'/g, "\\'");
   $('#catChips').innerHTML = ['Alle', ...DATA.categories]
-    .map(c => chip(c + (c==='Alle'?'':` (${items.filter(i=>i.kategorie===c).length})`),
-                   filterCat===c, `setCat('${j(c)}')`)).join('');
+    .map(c => `<button class="chip ${filterCat===c?'on':''}" onclick="setCat('${j(c)}')">${esc(c)}</button>`).join('');
   $('#statusChips').innerHTML = ['Alle','Offen','Beansprucht','Abgeholt']
-    .map(s => chip(s, filterStatus===s, `setStatus('${s}')`)).join('');
+    .map(s => `<button class="chip ${filterStatus===s?'on':''}" onclick="setStatus('${s}')">${s}</button>`).join('');
 }
 function setCat(c) { filterCat = c; renderChips(); renderSearch(); }
 function setStatus(s) { filterStatus = s; renderChips(); renderSearch(); }
-function goSearchAll() {
-  $('#searchQ').value = ''; filterCat='Alle'; filterStatus='Alle';
-  renderChips(); renderSearch();
-  $('#searchTitle').textContent = 'Alle Fundstücke'; show('search');
-}
-function goSearchCat(cat) {
-  $('#searchQ').value = ''; filterCat=cat; filterStatus='Alle';
-  renderChips(); renderSearch();
-  $('#searchTitle').textContent = cat; show('search');
-}
-function doSearch(e) { e.preventDefault();
-  $('#searchQ').value = $('#homeQ').value;
+function goSearchAll() { $('#searchQ').value=''; filterCat='Alle'; filterStatus='Alle';
+  renderChips(); renderSearch(); $('#searchTitle').textContent='Alle Fundstücke'; show('search'); }
+function goSearchCat(cat) { $('#searchQ').value=''; filterCat=cat; filterStatus='Alle';
+  renderChips(); renderSearch(); $('#searchTitle').textContent=cat; show('search'); }
+function doSearch(e) { e.preventDefault(); $('#searchQ').value = $('#homeQ').value;
   filterCat='Alle'; filterStatus='Alle'; renderChips(); renderSearch();
-  $('#searchTitle').textContent = 'Suchergebnisse'; show('search'); }
+  $('#searchTitle').textContent='Suchergebnisse'; show('search'); }
 function doSearchFromView(e) { e.preventDefault(); renderSearch(); }
-
-function katCard(cat) {
-  const icon = KAT_ICON[cat] || '📦';
-  const n = items.filter(i=>i.kategorie===cat).length;
-  return `<div>
-    <div class="card bg-base-100 shadow card-hover cursor-pointer h-full" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">
-      <div class="card-body p-4 items-center text-center gap-1">
-        <span class="text-4xl">${icon}</span>
-        <h3 class="card-title text-sm justify-center">${esc(cat)}</h3>
-        <span class="text-xs text-base-content/50">${n} Stück(e)</span>
-      </div>
-    </div>
-  </div>`;
-}
 
 function init() {
   showFlash('__FLASH__');
   const open = items.filter(i=>i.status==='Offen');
-  $('#openCount').textContent = `${open.length} offen`;
-  $('#statDrawer').innerHTML = `
-    <div class="stats stats-vertical w-full bg-base-200/40">
-      <div class="stat py-2"><div class="stat-title text-xs">Offen</div>
-        <div class="stat-value text-primary text-xl">${open.length}</div></div>
-      <div class="stat py-2"><div class="stat-title text-xs">Diese Woche</div>
-        <div class="stat-value text-xl">${items.filter(i=>i.neu).length}</div></div>
-      <div class="stat py-2"><div class="stat-title text-xs">Zurückgeführt</div>
-        <div class="stat-value text-success text-xl">${items.filter(i=>i.status==='Abgeholt').length}</div></div>
-      <div class="stat py-2"><div class="stat-title text-xs">Gesamt</div>
-        <div class="stat-value text-xl">${items.length}</div></div>
-    </div>`;
 
-  // Kategorie-Scroller
-  $('#scrollerCats').innerHTML = DATA.categories.map(katCard).join('');
+  $('#scrollerCats').innerHTML = DATA.categories.map(cat => {
+    const n = items.filter(i=>i.kategorie===cat).length;
+    return `<div>
+      <div class="icard icard-hover p-3.5 cursor-pointer h-full" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">
+        <div class="w-9 h-9 rounded-lg bg-[#F4F4F5] flex items-center justify-center">${katSvg(cat)}</div>
+        <b class="block text-[.8rem] leading-tight mt-2 clamp2">${esc(cat)}</b>
+        <span class="text-[.66rem] text-[var(--muted)]">${n}</span>
+      </div></div>`;
+  }).join('');
 
-  // Neu
   const neu = [...items].filter(i=>i.status!=='Entsorgt')
     .sort((a,b)=>b.datum_fund.localeCompare(a.datum_fund)).slice(0,10);
   $('#scrollerNew').innerHTML = neu.map(i=>`<div>${card(i)}</div>`).join('');
 
-  // Kategorien-Liste mit Buttons
   $('#catList').innerHTML = DATA.categories.map(cat => {
-    const icon = KAT_ICON[cat] || '📦';
     const n = items.filter(i=>i.kategorie===cat).length;
-    return `<div class="flex items-center gap-3 bg-base-100 border border-base-200 rounded-box px-4 py-3 shadow-sm">
-      <span class="text-2xl">${icon}</span>
-      <div class="flex-1"><b class="text-sm">${esc(cat)}</b>
-        <div class="text-xs text-base-content/50">${n} Fundstück(e)</div></div>
-      <button class="btn btn-sm btn-outline" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">Ansehen →</button>
+    return `<div class="icard flex items-center gap-3 px-3.5 py-2.5">
+      <div class="w-8 h-8 rounded-lg bg-[#F4F4F5] flex items-center justify-center">${katSvg(cat)}</div>
+      <div class="flex-1 min-w-0"><b class="block text-[.82rem] truncate">${esc(cat)}</b>
+        <span class="text-[.66rem] text-[var(--muted)]">${n} Fundstück(e)</span></div>
+      <button class="btn btn-ghost btn-xs" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">→</button>
     </div>`;
   }).join('');
 
-  // Drawer-Menüs
   const j = (s) => s.replace(/'/g, "\\'");
   $('#drawerCats').innerHTML = DATA.categories.map(c =>
-    `<li><a class="text-sm" onclick="closeDrawer();goSearchCat('${j(c)}')">${KAT_ICON[c]||'📦'} ${esc(c)}
-      <span class="badge badge-ghost badge-xs ml-auto">${items.filter(i=>i.kategorie===c).length}</span></a></li>`).join('');
-  $('#drawerStatus').innerHTML = ['Alle','Offen','Beansprucht','Abgeholt'].map(s =>
-    `<li><a class="text-sm" onclick="closeDrawer();goSearchStatus('${s}')">${s}</a></li>`).join('');
+    `<button class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-[#F4F4F5] text-[.82rem]" onclick="drawer.close();goSearchCat('${j(c)}')">
+      <span class="text-[var(--muted)]">${katSvg(c)}</span><span class="truncate">${esc(c)}</span>
+      <span class="ml-auto text-[.66rem] text-[var(--muted)]">${items.filter(i=>i.kategorie===c).length}</span></button>`).join('');
 
+  $('#statDrawer').innerHTML = `
+    <div class="icard p-2.5"><p class="lbl">Offen</p><p class="text-lg font-extrabold">${open.length}</p></div>
+    <div class="icard p-2.5"><p class="lbl">Neu</p><p class="text-lg font-extrabold">${items.filter(i=>i.neu).length}</p></div>
+    <div class="icard p-2.5"><p class="lbl">Abgeholt</p><p class="text-lg font-extrabold text-[var(--ok)]">${items.filter(i=>i.status==='Abgeholt').length}</p></div>
+    <div class="icard p-2.5"><p class="lbl">Gesamt</p><p class="text-lg font-extrabold">${items.length}</p></div>`;
   renderChips();
 }
-function goSearchStatus(s) {
-  $('#searchQ').value = ''; filterCat='Alle'; filterStatus=s;
-  renderChips(); renderSearch();
-  $('#searchTitle').textContent = 'Fundstücke · ' + s; show('search');
-}
 init();
+
+/* ---------- iframe auf volle Hoehe zwingen ---------- */
+try {
+  const ifr = window.parent.document.querySelector('iframe[title="streamlit_component"], iframe');
+  if (ifr && ifr.contentWindow === window) {
+    ifr.style.position = 'fixed'; ifr.style.inset = '0';
+    ifr.style.width = '100vw'; ifr.style.height = '100vh';
+    ifr.style.border = 'none'; ifr.style.zIndex = '9999';
+    window.parent.document.documentElement.style.overflow = 'hidden';
+  }
+} catch (e) { /* fallback: normale component-hoehe */ }
 </script>
 </body>
 </html>
@@ -784,7 +798,9 @@ init();
 UI = (UI
       .replace("__WORDMARK__", wordmark)
       .replace("__LOGOTOP__", logo_top)
+      .replace("__LOGO__", logo_main)
+      .replace("__IPAD__", ipad_frame)
       .replace("__DATA__", data_json)
       .replace("__FLASH__", flash.replace("'", "\\'")))
 
-components.html(UI, height=1400, scrolling=True)
+components.html(UI, height=1400, scrolling=False)
