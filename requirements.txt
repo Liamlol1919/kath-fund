@@ -4,3 +4,4 @@ numpy>=1.26
 pandas>=2.2
 qrcode[pil]>=7.4
 h5py>=3.11
+onnxruntime>=1.20

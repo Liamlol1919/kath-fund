@@ -252,11 +252,14 @@ st.markdown("""
     }
     .verdict-cat { font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 1.16rem; letter-spacing: -.015em; }
     .verdict-meta { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--ink-soft); margin-top: 3px; }
-    .empty {
-        border: 1.5px dashed var(--line); border-radius: 11px; padding: 34px 20px; text-align: center;
-        font-family: 'IBM Plex Mono', monospace; font-size: .78rem; letter-spacing: .08em;
-        text-transform: uppercase; color: var(--ink-soft); background: rgba(255, 252, 244, .6);
+    .ai-result-card {
+        background: var(--card); border: 1.5px solid var(--ink); border-radius: 10px;
+        padding: 13px 15px; box-shadow: var(--hard); margin-top: 10px;
     }
+    .ai-result-card .result-label { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+    .ai-result-card .result-title { font-family: 'Archivo', sans-serif; font-size: 1.2rem; font-weight: 800; margin-top: 3px; }
+    .ai-result-card .result-meta { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: var(--ink-soft); margin-top: 3px; }
+    .ai-warn { border-left: 3px solid var(--amber); background: #F5EFDC; padding: 9px 12px; font-size: .8rem; color: var(--ink-2); margin-top: 9px; border-radius: 0 6px 6px 0; }
 
     /* ================= Formulare & Buttons ================= */
     .stButton > button, .stDownloadButton > button, [data-testid="stFormSubmitButton"] > button,
@@ -290,6 +293,7 @@ st.markdown("""
     div[data-testid="stTextInput"] input::placeholder, div[data-testid="stTextArea"] textarea::placeholder { color: #A79D86; }
     /* Schnellsuche: groß */
     .st-key-q input { font-size: 1.05rem !important; min-height: 3.1rem; padding-left: .95rem !important; }
+    .st-key-searchwrap input { font-size: 1.05rem !important; min-height: 3.1rem; padding-left: .95rem !important; }
     div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {
         border: 1.5px dashed var(--ink); background: var(--field); border-radius: 11px;
     }
@@ -580,77 +584,115 @@ IMAGENET_CLASS_TO_CATEGORY = {
 }
 
 @st.cache_resource(show_spinner=False)
-def load_mobilenet_model():
-    """Versucht MobileNetV2 zu laden (nur wenn TensorFlow installiert ist)."""
+def load_vision_model():
+    """Leichtes ONNX-Modell; kein TensorFlow nötig."""
     try:
-        import tensorflow as tf
-        from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
-        model = MobileNetV2(weights="imagenet")
-        return model, preprocess_input, decode_predictions
+        import onnxruntime as ort
+        model_path = Path("mobilenetv2.onnx")
+        labels_path = Path("imagenet_labels.json")
+        if not model_path.exists() or not labels_path.exists():
+            return None
+        session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
+        labels = json.loads(labels_path.read_text(encoding="utf-8"))
+        return session, labels
     except Exception:
         return None
 
+# ImageNet kennt keine Schul-Fundbüro-Kategorien. Diese 50 häufigen visuellen
+# Klassen werden deshalb auf unsere acht Katalogkategorien zusammengeführt.
+VISION_CLASS_TO_CATEGORY = {
+    "mobile phone": "Elektronik & Kabel", "cellular telephone": "Elektronik & Kabel",
+    "hand-held computer": "Elektronik & Kabel", "laptop computer": "Elektronik & Kabel",
+    "notebook computer": "Elektronik & Kabel", "desktop computer": "Elektronik & Kabel",
+    "computer keyboard": "Elektronik & Kabel", "computer mouse": "Elektronik & Kabel",
+    "remote control": "Elektronik & Kabel", "digital clock": "Elektronik & Kabel",
+    "microphone": "Elektronik & Kabel", "camera": "Elektronik & Kabel",
+    "headphone": "Elektronik & Kabel", "radio": "Elektronik & Kabel",
+    "backpack": "Rucksäcke & Taschen", "purse": "Rucksäcke & Taschen",
+    "handbag": "Rucksäcke & Taschen", "wallet": "Rucksäcke & Taschen",
+    "briefcase": "Rucksäcke & Taschen", "suitcase": "Rucksäcke & Taschen",
+    "shopping basket": "Rucksäcke & Taschen", "mailbag": "Rucksäcke & Taschen",
+    "water bottle": "Trinkflaschen & Brotdosen", "bottle": "Trinkflaschen & Brotdosen",
+    "beer bottle": "Trinkflaschen & Brotdosen", "coffee mug": "Trinkflaschen & Brotdosen",
+    "cup": "Trinkflaschen & Brotdosen", "pitcher": "Trinkflaschen & Brotdosen",
+    "t-shirt": "Kleidung & Textilien", "jersey": "Kleidung & Textilien",
+    "sweatshirt": "Kleidung & Textilien", "pullover": "Kleidung & Textilien",
+    "cardigan": "Kleidung & Textilien", "sweater": "Kleidung & Textilien",
+    "jacket": "Kleidung & Textilien", "coat": "Kleidung & Textilien",
+    "jean": "Kleidung & Textilien", "trousers": "Kleidung & Textilien",
+    "dress": "Kleidung & Textilien", "scarf": "Kleidung & Textilien",
+    "hat": "Kleidung & Textilien", "glove": "Kleidung & Textilien",
+    "running shoe": "Sportbekleidung", "tennis ball": "Sportbekleidung",
+    "volleyball": "Sportbekleidung", "basketball": "Sportbekleidung",
+    "football helmet": "Sportbekleidung", "book": "Schulmaterial & Bücher",
+    "textbook": "Schulmaterial & Bücher", "notebook": "Schulmaterial & Bücher",
+    "pencil": "Schulmaterial & Bücher", "pencil case": "Schulmaterial & Bücher",
+    "ruler": "Schulmaterial & Bücher", "calculator": "Schulmaterial & Bücher",
+    "key": "Schlüssel & Wertsachen", "keyring": "Schlüssel & Wertsachen",
+    "watch": "Schlüssel & Wertsachen", "ring": "Schlüssel & Wertsachen",
+    "necklace": "Schlüssel & Wertsachen", "bracelet": "Schlüssel & Wertsachen",
+}
+
+
+def _softmax(values):
+    values = values - np.max(values)
+    exp = np.exp(values)
+    return exp / np.sum(exp)
+
+
 def analyze_image_ai(pil_image: Image.Image):
+    """Erkennt einen Gegenstand mit MobileNetV2/ONNX und fällt sicher zurück.
+
+    Wichtig: ImageNet ist kein speziell trainiertes Fundbüro-Modell. Das Ergebnis
+    ist deshalb bewusst nur ein Vorschlag; das Formular lässt die Kategorie ändern.
     """
-    KI-Erkennung: MobileNetV2 (falls verfügbar), sonst Heuristik.
-    """
-    # Versuche MobileNetV2
-    mobilenet_result = load_mobilenet_model()
-    if mobilenet_result is not None:
-        model, preprocess_input, decode_predictions = mobilenet_result
+    vision = load_vision_model()
+    if vision is not None:
         try:
-            size = (224, 224)
-            image = ImageOps.fit(pil_image, size, Image.Resampling.LANCZOS)
-            img_array = np.asarray(image, dtype=np.float32)
-            img_array = np.expand_dims(img_array, axis=0)
-            img_array = preprocess_input(img_array)
+            session, labels = vision
+            image = ImageOps.fit(pil_image.convert("RGB"), (224, 224), Image.Resampling.LANCZOS)
+            arr = np.asarray(image, dtype=np.float32) / 255.0
+            arr = (arr - np.array([.485, .456, .406], dtype=np.float32)) / np.array([.229, .224, .225], dtype=np.float32)
+            arr = np.transpose(arr, (2, 0, 1))[None, ...]
+            output = session.run(None, {session.get_inputs()[0].name: arr})[0][0]
+            probs = _softmax(output)
+            ranked = np.argsort(probs)[::-1]
 
-            preds = model.predict(img_array, verbose=0)
-            decoded = decode_predictions(preds, top=5)[0]  # Top-5 Klassen
+            # Nicht die erstbeste beliebige ImageNet-Klasse nehmen, sondern die
+            # stärkste passende Objektklasse aus den Top-50.
+            candidates = []
+            for rank, index in enumerate(ranked[:50]):
+                label = str(labels[int(index)]).lower().replace("_", " ")
+                category = VISION_CLASS_TO_CATEGORY.get(label)
+                if category:
+                    candidates.append((category, float(probs[index]), label, rank))
 
-            # Suche die erste Klasse, die wir auf eine Kategorie mappen können
-            for _, class_name, prob in decoded:
-                class_name_lower = class_name.lower().replace("_", " ")
-                if class_name_lower in IMAGENET_CLASS_TO_CATEGORY:
-                    category = IMAGENET_CLASS_TO_CATEGORY[class_name_lower]
-                    return category, float(prob), "MobileNetV2 (ImageNet)"
-
-            # Wenn keine passende Klasse gefunden, nehme die beste mit "Sonstiges"
-            best_class = decoded[0][1].lower().replace("_", " ")
-            return "Sonstiges", float(decoded[0][2]), "MobileNetV2 (ImageNet, keine Zuordnung)"
+            if candidates:
+                category, probability, label, rank = max(candidates, key=lambda x: x[1])
+                # Die ImageNet-Wahrscheinlichkeit ist bei Fotos oft klein; sie
+                # dient nur als Signal. Ein niedriger Wert bleibt sichtbar als
+                # Warnung, die Kategorie wird aber trotzdem sinnvoll vorgeschlagen.
+                confidence = max(0.35, min(0.88, 0.35 + float(probability) * 3.0))
+                return category, confidence, f"MobileNetV2 ONNX · {label}"
         except Exception:
             pass
 
-    # Heuristik-Fallback
+    # Konservativer Fallback: niemals aus Seitenverhältnis allein eine falsche
+    # konkrete Kategorie behaupten.
     rgb_img = pil_image.convert("RGB")
     w, h = rgb_img.size
     aspect_ratio = w / float(h)
     small = rgb_img.resize((64, 64))
-    arr = np.array(small, dtype=np.float32)
+    arr = np.asarray(small, dtype=np.float32)
     avg_color = arr.mean(axis=(0, 1))
     std_color = arr.std(axis=(0, 1))
     r, g, b = avg_color
 
-    suggested = "Sonstiges"
-    confidence = 0.84
-
-    if aspect_ratio < 0.65 or aspect_ratio > 1.55:
-        suggested = "Trinkflaschen & Brotdosen"
-        confidence = 0.88
-    elif (r > 130 and g < 100 and b < 100) or (b > 130 and r < 100) or (r > 150 and g > 150 and b < 80):
-        suggested = "Kleidung & Textilien"
-        confidence = 0.86
-    elif std_color.mean() < 22 and (r < 60 and g < 60 and b < 60 or r > 200 and g > 200 and b > 200):
-        suggested = "Elektronik & Kabel"
-        confidence = 0.82
-    elif aspect_ratio > 0.8 and aspect_ratio < 1.3 and std_color.mean() > 40:
-        suggested = "Rucksäcke & Taschen"
-        confidence = 0.85
-    else:
-        suggested = "Kleidung & Textilien"
-        confidence = 0.78
-
-    return suggested, confidence, "Vision-Feature-Engine (Heuristik)"
+    if std_color.mean() < 18 and r < 80 and g < 80 and b < 80:
+        return "Elektronik & Kabel", 0.50, "Bildmerkmale · unsicherer Vorschlag"
+    if aspect_ratio < 0.62 or aspect_ratio > 1.7:
+        return "Trinkflaschen & Brotdosen", 0.50, "Bildmerkmale · unsicherer Vorschlag"
+    return "Sonstiges", 0.35, "Kein zuverlässiges Modell verfügbar"
 
 # =============================================================================
 # 4. HILFSFUNKTIONEN FÜR DIE OBERFLÄCHE
@@ -983,7 +1025,9 @@ def render_erfassen():
                 uploaded_pil = Image.open(cam_file).convert("RGB")
 
         if uploaded_pil is not None:
-            st.image(uploaded_pil, caption="Aufnahme für den Beleg", width="stretch")
+            preview = uploaded_pil.copy()
+            preview.thumbnail((900, 470), Image.Resampling.LANCZOS)
+            st.image(preview, caption="Aufnahme für den Beleg", width="stretch")
             with st.spinner("Zuordnung läuft"):
                 ai_category, ai_confidence, ai_engine = analyze_image_ai(uploaded_pil)
 
@@ -992,13 +1036,17 @@ def render_erfassen():
 
             st.markdown(f"""
             <div class="verdict">
-                <div class="verdict-stamp">Zuordnung</div>
+                <div class="verdict-stamp">Vorschlag</div>
                 <div>
                     <div class="verdict-cat">{html.escape(ai_category)}</div>
                     <div class="verdict-meta">Sicherheit {ai_confidence * 100:.0f} % · {html.escape(ai_engine)}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            if ai_confidence < 0.60:
+                st.markdown("""
+                <div class="ai-warn"><b>Unsicherer Vorschlag:</b> Bitte die Kategorie rechts unbedingt prüfen. Ein Bildmodell kann ähnliche Gegenstände verwechseln.</div>
+                """, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div class="empty">
@@ -1017,10 +1065,15 @@ def render_erfassen():
 
             st.markdown(f"""
             <div class="note">
-                <b>Zuordnung:</b> {html.escape(ai_category)}
-                <span>Automatisch aus dem Lichtbild abgeleitet. Der Wert wird beim Speichern übernommen.</span>
+                <b>Modellvorschlag:</b> {html.escape(ai_category)}
+                <span>Automatisch aus dem Lichtbild abgeleitet. Bitte unten bestätigen oder ändern.</span>
             </div>
             """, unsafe_allow_html=True)
+            in_kategorie = st.selectbox(
+                "Kategorie bestätigen*",
+                CATEGORIES,
+                index=CATEGORIES.index(ai_category) if ai_category in CATEGORIES else len(CATEGORIES) - 1,
+            )
 
             c1, c2 = st.columns(2)
             with c1:
@@ -1057,7 +1110,7 @@ def render_erfassen():
                     neues_item = {
                         "id": new_id,
                         "titel": in_titel.strip(),
-                        "kategorie": ai_category,
+                        "kategorie": in_kategorie,
                         "fundort": in_fundort,
                         "abgabeort": in_abgabeort.strip() or "Hausmeisterbüro (Raum 001)",
                         "kontakt_kuerzel": in_kuerzel.strip().upper(),
