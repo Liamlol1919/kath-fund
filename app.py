@@ -4,7 +4,7 @@
 ===============================================================================
 Inspirationsbasis: Originale Papier-Skizze (Kath. Fund Layout & Workflow)
 Optimiert für Streamlit >= 1.40
-KI-Modell: MobileNetV2 (öffentlich, vortrainiert auf ImageNet)
+KI-Modell: MobileNetV2 (optional, sonst Heuristik)
 ===============================================================================
 """
 
@@ -366,7 +366,7 @@ def load_item_image(filename: str):
     return None
 
 # =============================================================================
-# 3. AI VISION ENGINE (MOBILENETV2 + FALLBACKS)
+# 3. AI VISION ENGINE (OPTIONAL: MOBILENETV2, SONST HEURISTIK)
 # =============================================================================
 
 # Mapping von ImageNet-Klassen (MobileNetV2) auf unsere Kategorien
@@ -457,19 +457,18 @@ IMAGENET_CLASS_TO_CATEGORY = {
 
 @st.cache_resource(show_spinner=False)
 def load_mobilenet_model():
-    """Lädt vortrainiertes MobileNetV2 (ImageNet)."""
+    """Versucht MobileNetV2 zu laden (nur wenn TensorFlow installiert ist)."""
     try:
         import tensorflow as tf
         from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input, decode_predictions
         model = MobileNetV2(weights="imagenet")
         return model, preprocess_input, decode_predictions
-    except Exception as e:
+    except Exception:
         return None
 
 def analyze_image_ai(pil_image: Image.Image):
     """
-    KI-Erkennung mit MobileNetV2 (öffentlich, vortrainiert).
-    Fallback: Heuristik (falls TensorFlow nicht verfügbar).
+    KI-Erkennung: MobileNetV2 (falls verfügbar), sonst Heuristik.
     """
     # Versuche MobileNetV2
     mobilenet_result = load_mobilenet_model()
@@ -614,7 +613,8 @@ with tab_katalog:
         go_btn = st.button("GO 🔍", width="stretch")
     with col_reset:
         if st.button("Reset ↺", width="stretch"):
-            st.session_state["search_field"] = ""
+            # Session-State-Key entfernen, damit das Widget beim nächsten Rerun neu erstellt wird
+            st.session_state.pop("search_field", None)
             st.rerun()
 
     col_f1, col_f2, col_f3 = st.columns([1, 1, 1])
