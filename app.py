@@ -1,91 +1,116 @@
-"""
-kath.fund — Fundbüro · Katharineum zu Lübeck
-Architektur: Streamlit = Backend only. Die gesamte UI läuft als ein HTML-Dokument
-(Tailwind + daisyUI) direkt im Streamlit-DOM injiziert — kein iframe, keine Sandbox.
+"""kath.fund — Digitales Fundbüro des Katharineums zu Lübeck.
 
-Kommunikation: Die UI wird direkt ins Streamlit-DOM injiziert (st.markdown).
-  Aktionen (melden, beanspruchen) = echte Links / location.search -> Streamlit-Rerun.
-  Suche/Filter/Navigation laufen in JS im selben Dokument — instant, ohne Server.
+UI komplett auf `streamlit-shadcn-ui` aufgebaut (shadcn-Cards, Badges,
+Tabs, Metric-Cards, Charts, Dialoge). Bilderkennung über das
+Teachable-Machine-Modell `keras_model.h5` aus TestKI4
+(https://github.com/kumma-git/TestKI4) — Input: Foto, Output: Klassen aus
+`teachable_labels.txt`. Fallback: ONNX-ImageNet, danach Heuristik.
 """
 
-import json
+from __future__ import annotations
+
 import datetime
 import io
-import base64
-import html as html_mod
+import json
 from pathlib import Path
 
-import streamlit as st
-from PIL import Image, ImageOps
 import numpy as np
-import streamlit.components.v1 as components
+import streamlit as st
+import streamlit_shadcn_ui as ui
+from PIL import Image
+
+from teachable_ai import (
+    TEACHABLE_TO_CATEGORY,
+    heuristic_guess,
+    load_teachable_labels,
+    predict_teachable,
+)
 
 # =============================================================================
-# 1. PAGE + DATA
+# 1. Seite & Konstanten
 # =============================================================================
-
-st.set_page_config(page_title="kath.fund — Fundbüro", page_icon="🎒",
-                   layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="kath.fund — Fundbüro Katharineum",
+    page_icon="🎒",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 STORAGE = Path("data")
-STORAGE.mkdir(exist_ok=True)
 IMG_DIR = STORAGE / "images"
-IMG_DIR.mkdir(exist_ok=True)
 ITEMS_FILE = STORAGE / "items.json"
 CLAIMS_FILE = STORAGE / "claims.json"
+STORAGE.mkdir(exist_ok=True)
+IMG_DIR.mkdir(exist_ok=True)
 
 CATEGORIES = [
-    "Kleidung & Textilien", "Trinkflaschen & Brotdosen", "Rucksäcke & Taschen",
-    "Elektronik & Kabel", "Schlüssel & Wertsachen", "Schulmaterial & Bücher",
-    "Sportbekleidung", "Sonstiges",
+    "Kleidung & Textilien",
+    "Trinkflaschen & Brotdosen",
+    "Rucksäcke & Taschen",
+    "Elektronik & Kabel",
+    "Schlüssel & Wertsachen",
+    "Schulmaterial & Bücher",
+    "Sportbekleidung",
+    "Sonstiges",
 ]
-LOCATIONS = ["Hauptgebäude - Foyer", "Pausenhof", "Sporthalle", "Mensa / Cafeteria",
-             "Bibliothek", "Fachräume / MINT", "Musiksaal", "Unbekannt"]
+LOCATIONS = [
+    "Hauptgebäude - Foyer",
+    "Pausenhof",
+    "Sporthalle",
+    "Mensa / Cafeteria",
+    "Bibliothek",
+    "Fachräume / MINT",
+    "Musiksaal",
+    "Unbekannt",
+]
+STATUSES = ["Offen", "Beansprucht", "Abgeholt"]
 
-KAT_ICON = {
-    "Kleidung & Textilien": "🧥", "Trinkflaschen & Brotdosen": "🥤",
-    "Rucksäcke & Taschen": "🎒", "Elektronik & Kabel": "🎧",
-    "Schlüssel & Wertsachen": "🔑", "Schulmaterial & Bücher": "📚",
-    "Sportbekleidung": "👟", "Sonstiges": "📦",
+KAT_EMOJI = {
+    "Kleidung & Textilien": "🧥",
+    "Trinkflaschen & Brotdosen": "🥤",
+    "Rucksäcke & Taschen": "🎒",
+    "Elektronik & Kabel": "🎧",
+    "Schlüssel & Wertsachen": "🔑",
+    "Schulmaterial & Bücher": "📚",
+    "Sportbekleidung": "👟",
+    "Sonstiges": "📦",
 }
 
+STATUS_VARIANT = {
+    "Offen": "destructive",
+    "Beansprucht": "secondary",
+    "Abgeholt": "outline",
+    "Entsorgt": "outline",
+}
+
+TABS = ["Entdecken", "Verzeichnis", "Fund melden", "Dashboard"]
+
+# =============================================================================
+# 2. Storage
+# =============================================================================
 DEFAULT_ITEMS = [
-    {"id": 1001, "titel": "Derbe Regenjacke Dunkelblau", "kategorie": "Kleidung & Textilien",
-     "fundort": "Pausenhof", "abgabeort": "Hausmeisterbüro (Raum 001)",
-     "datum_fund": "2026-09-01", "datum_ablauf": "2026-12-01", "status": "Offen",
-     "beschreibung": "Größe M, gelber Reißverschluss, Name im Etikett leicht verwischt.",
-     "image_file": None, "tags": ["Jacke", "Blau", "Größe M"]},
-    {"id": 1002, "titel": "AirPods Pro Case", "kategorie": "Elektronik & Kabel",
-     "fundort": "Mensa / Cafeteria", "abgabeort": "Sekretariat (Tresor)",
-     "datum_fund": "2026-09-05", "datum_ablauf": "2026-12-05", "status": "Beansprucht",
-     "beschreibung": "Kratzer auf der Rückseite, schwarze Silikon-Schutzhülle.",
-     "image_file": None, "tags": ["Apple", "Audio", "Schwarz"]},
-    {"id": 1003, "titel": "Edelstahl Trinkflasche 1L", "kategorie": "Trinkflaschen & Brotdosen",
-     "fundort": "Sporthalle", "abgabeort": "Sporthalle Regallager",
-     "datum_fund": "2026-08-28", "datum_ablauf": "2026-11-28", "status": "Abgeholt",
-     "beschreibung": "Marke 720°DGREE, mattgrün mit Sport-Aufklebern.",
-     "image_file": None, "tags": ["720°DGREE", "Grün", "Metall"]},
-    {"id": 1004, "titel": "Federmappe mit Filzstiften", "kategorie": "Schulmaterial & Bücher",
-     "fundort": "Fachräume / MINT", "abgabeort": "Hausmeisterbüro (Raum 001)",
-     "datum_fund": datetime.date.today().strftime("%Y-%m-%d"),
-     "datum_ablauf": (datetime.date.today() + datetime.timedelta(days=90)).strftime("%Y-%m-%d"),
-     "status": "Offen", "beschreibung": "Rot kariert, ca. 30 Filzstifte, Initialen „J.K.“.",
-     "image_file": None, "tags": ["Federmappe", "Filzstifte"]},
-    {"id": 1005, "titel": "Sportschuh links Größe 43", "kategorie": "Sportbekleidung",
-     "fundort": "Sporthalle", "abgabeort": "Sporthalle Regallager",
-     "datum_fund": datetime.date.today().strftime("%Y-%m-%d"),
-     "datum_ablauf": (datetime.date.today() + datetime.timedelta(days=90)).strftime("%Y-%m-%d"),
-     "status": "Offen", "beschreibung": "Schwarz-weiß, sauber gebunden.",
-     "image_file": None, "tags": ["Schuh", "43"]},
-    {"id": 1006, "titel": "Schlüsselbund mit Bibliotheks-Anhänger", "kategorie": "Schlüssel & Wertsachen",
-     "fundort": "Bibliothek", "abgabeort": "Sekretariat (Tresor)",
-     "datum_fund": "2026-09-08", "datum_ablauf": "2026-12-08", "status": "Offen",
-     "beschreibung": "Drei Schlüssel, blauer Anhänger der Stadtbibliothek.",
-     "image_file": None, "tags": ["Schlüssel", "Blau"]},
+    {
+        "id": 1001, "titel": "Dunkelblaue Regenjacke",
+        "kategorie": "Kleidung & Textilien", "fundort": "Pausenhof",
+        "abgabeort": "Hausmeisterbüro (Raum 001)",
+        "datum_fund": "2026-09-01", "datum_ablauf": "2026-12-01",
+        "status": "Offen",
+        "beschreibung": "Größe M, gelber Reißverschluss.",
+        "image_file": None, "tags": ["Jacke", "Blau"],
+    },
+    {
+        "id": 1002, "titel": "Edelstahl-Trinkflasche 1L",
+        "kategorie": "Trinkflaschen & Brotdosen", "fundort": "Sporthalle",
+        "abgabeort": "Sporthalle Regallager",
+        "datum_fund": "2026-08-28", "datum_ablauf": "2026-11-28",
+        "status": "Offen",
+        "beschreibung": "Mattgrün, mit Sport-Aufklebern.",
+        "image_file": None, "tags": ["Flasche", "Grün"],
+    },
 ]
 
 
-def load_json(path, default):
+def load_json(path: Path, default):
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
@@ -94,33 +119,62 @@ def load_json(path, default):
     return default
 
 
-def save_json(path, data):
+def save_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-if "items" not in st.session_state:
-    st.session_state["items"] = load_json(ITEMS_FILE, DEFAULT_ITEMS)
-if "claims" not in st.session_state:
-    st.session_state["claims"] = load_json(CLAIMS_FILE, [
-        {"claim_id": 501, "item_id": 1002, "name": "Lukas M. (9b)",
-         "proof": "Seriennummer auf OVP vorhanden.", "datum": "2026-09-06", "status": "In Prüfung"}])
-if "flash" not in st.session_state:
-    st.session_state["flash"] = ""
-if "native_view" not in st.session_state:
-    st.session_state["native_view"] = None  # None | "report"
+for key, path, default in (
+    ("items", ITEMS_FILE, DEFAULT_ITEMS),
+    ("claims", CLAIMS_FILE, []),
+):
+    if key not in st.session_state:
+        st.session_state[key] = load_json(path, default)
+
+st.session_state.setdefault("tab", TABS[0])
+st.session_state.setdefault("selected_id", None)
+st.session_state.setdefault("flash", None)  # (kind, title, text)
+st.session_state.setdefault("rep_bytes", None)
+st.session_state.setdefault("rep_ai", None)
+st.session_state.setdefault("rep_titel_ai", "")
+st.session_state.setdefault("rep_kat_ai", None)
+st.session_state.setdefault("show_done_dialog", False)
+st.session_state.setdefault("uploader_nonce", 0)
+
+items: list = st.session_state["items"]
+claims: list = st.session_state["claims"]
+heute = datetime.date.today().isoformat()
+
+
+def save_all() -> None:
+    save_json(ITEMS_FILE, items)
+    save_json(CLAIMS_FILE, claims)
+
+
+def flash(kind: str, title: str, text: str = "") -> None:
+    st.session_state["flash"] = (kind, title, text)
+
+
+def show_flash() -> None:
+    msg = st.session_state.get("flash")
+    if not msg:
+        return
+    kind, title, text = msg
+    ui.alert(title, text or None, variant="destructive" if kind == "error" else "default")
+    st.session_state["flash"] = None
+
 
 # =============================================================================
-# 2. BILDER
+# 3. Bilder & KI
 # =============================================================================
-
-
-def save_uploaded_image(pil_img, item_id):
+def save_uploaded_image(pil_img: Image.Image, item_id: int) -> str:
     name = f"item_{item_id}_{int(datetime.datetime.now().timestamp())}.jpg"
+    if pil_img.mode in ("RGBA", "P"):
+        pil_img = pil_img.convert("RGB")
     pil_img.save(IMG_DIR / name, format="JPEG", quality=85)
     return name
 
 
-def load_item_image(filename):
+def load_item_image(filename: str | None) -> Image.Image | None:
     if not filename:
         return None
     p = IMG_DIR / filename
@@ -132,956 +186,625 @@ def load_item_image(filename):
     return None
 
 
-def img_uri(filename, max_dim=420):
-    img = load_item_image(filename)
-    if img is None:
-        return None
-    img = img.copy()
-    img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=82)
-    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
-
-
-def file_uri(path_str, max_dim=1400):
-    p = Path(path_str)
-    if not p.exists():
-        return ""
-    img = Image.open(p)
-    img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-
-
-def hero_uris():
-    uris = []
-    for n in ["hero_1.png", "hero_2.png", "hero_3.png", "hero_4.png",
-              "hero_5.png", "hero_6.png", "hero_7.png"]:
-        p = Path("assets") / n
-        if not p.exists():
-            continue
-        img = Image.open(p)
-        img.thumbnail((420, 420), Image.Resampling.LANCZOS)
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        uris.append("data:image/png;base64," + base64.b64encode(buf.getvalue()).decode())
-    return uris
-
-
-def logo_top_uri():
-    p = Path("assets/logo_top.png")
-    if not p.exists():
-        return ""
-    img = Image.open(p)
-    img.thumbnail((640, 640), Image.Resampling.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-
-
-def wordmark_uri():
-    p = Path("assets/wordmark.png")
-    if not p.exists():
-        return ""
-    img = Image.open(p)
-    img.thumbnail((640, 640), Image.Resampling.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-
-
-# =============================================================================
-# 3. KI (MobileNetV2 ONNX, Fallback-Heuristik)
-# =============================================================================
-
-VISION_CLASS_TO_CATEGORY = {
-    "mobile phone": "Elektronik & Kabel", "cellular telephone": "Elektronik & Kabel",
-    "laptop computer": "Elektronik & Kabel", "notebook computer": "Elektronik & Kabel",
-    "computer keyboard": "Elektronik & Kabel", "computer mouse": "Elektronik & Kabel",
-    "remote control": "Elektronik & Kabel", "iPod": "Elektronik & Kabel",
-    "digital clock": "Elektronik & Kabel", "microphone": "Elektronik & Kabel",
-    "digital camera": "Elektronik & Kabel", "headphone": "Elektronik & Kabel",
-    "backpack": "Rucksäcke & Taschen", "purse": "Rucksäcke & Taschen",
-    "handbag": "Rucksäcke & Taschen", "wallet": "Rucksäcke & Taschen",
-    "briefcase": "Rucksäcke & Taschen", "suitcase": "Rucksäcke & Taschen",
-    "water bottle": "Trinkflaschen & Brotdosen", "bottle": "Trinkflaschen & Brotdosen",
-    "beer bottle": "Trinkflaschen & Brotdosen", "coffee mug": "Trinkflaschen & Brotdosen",
-    "cup": "Trinkflaschen & Brotdosen", "pitcher": "Trinkflaschen & Brotdosen",
-    "t-shirt": "Kleidung & Textilien", "jersey": "Kleidung & Textilien",
-    "sweatshirt": "Kleidung & Textilien", "pullover": "Kleidung & Textilien",
-    "cardigan": "Kleidung & Textilien", "sweater": "Kleidung & Textilien",
-    "jacket": "Kleidung & Textilien", "coat": "Kleidung & Textilien",
-    "jean": "Kleidung & Textilien", "trousers": "Kleidung & Textilien",
-    "dress": "Kleidung & Textilien", "scarf": "Kleidung & Textilien",
-    "running shoe": "Sportbekleidung", "tennis ball": "Sportbekleidung",
-    "volleyball": "Sportbekleidung", "basketball": "Sportbekleidung",
-    "soccer ball": "Sportbekleidung", "book jacket": "Schulmaterial & Bücher",
-    "comic book": "Schulmaterial & Bücher", "pencil box": "Schulmaterial & Bücher",
-    "rubber eraser": "Schulmaterial & Bücher", "calculator": "Schulmaterial & Bücher",
-    "padlock": "Schlüssel & Wertsachen", "combination lock": "Schlüssel & Wertsachen",
-    "digital watch": "Schlüssel & Wertsachen", "necklace": "Schlüssel & Wertsachen",
-    "bracelet": "Schlüssel & Wertsachen",
-    "ring binder": "Schulmaterial & Bücher", "dust jacket": "Schulmaterial & Bücher",
-    "book case": "Schulmaterial & Bücher", "envelope": "Schulmaterial & Bücher",
-    "crossword puzzle": "Schulmaterial & Bücher", "jigsaw puzzle": "Schulmaterial & Bücher",
-    "letter opener": "Schulmaterial & Bücher", "pencil sharpener": "Schulmaterial & Bücher",
-    "oscilloscope": "Elektronik & Kabel", "window screen": "Sonstiges",
-    "prayer rug": "Kleidung & Textilien", "abaya": "Kleidung & Textilien",
-    "cardigan": "Kleidung & Textilien", "miniskirt": "Kleidung & Textilien",
-    "gown": "Kleidung & Textilien", "jerkin": "Kleidung & Textilien",
-    "knee pad": "Sportbekleidung", "pajama": "Kleidung & Textilien",
-    "water jug": "Trinkflaschen & Brotdosen", "measuring cup": "Trinkflaschen & Brotdosen",
-    "corkscrew": "Schlüssel & Wertsachen", "nail": "Schlüssel & Wertsachen",
-    "screwdriver": "Schlüssel & Wertsachen", "hammer": "Schlüssel & Wertsachen",
-    "plunger": "Sonstiges", "lipstick": "Sonstiges", "lighter": "Sonstiges",
-    "match": "Sonstiges", "paper knife": "Sonstiges", "hand glass": "Sonstiges",
-    "neck brace": "Sonstiges", "hair spray": "Sonstiges", "maillot": "Sportbekleidung",
-    "cleaver": "Sonstiges", "spatula": "Sonstiges", "strainer": "Sonstiges",
-    "wok": "Sonstiges", "plate": "Sonstiges", "tray": "Sonstiges",
-    "saltshaker": "Sonstiges", "pop bottle": "Trinkflaschen & Brotdosen",
-    "beer glass": "Trinkflaschen & Brotdosen", "eggnog": "Trinkflaschen & Brotdosen",
-    "goblet": "Trinkflaschen & Brotdosen", "cocktail shaker": "Trinkflaschen & Brotdosen",
-    "koala": "Sonstiges",
-}
-
-
-MODEL_RELEASE = "https://github.com/Liamlol1919/kath-fund/releases/download/models"
-
-
-def _ensure_model(filename: str):
-    """Laedt das onnx-modell bei bedarf aus dem gh-release (einmalig, gecached)."""
-    p = Path(filename)
-    if p.exists() and p.stat().st_size > 1000:
-        return p
-    import urllib.request
-    try:
-        urllib.request.urlretrieve(f"{MODEL_RELEASE}/{filename}", p)
-    except Exception:
-        return None
-    return p
-
-
-@st.cache_resource(show_spinner="🧠 Erkennungs-Modell wird geladen — bitte ca. 10 Sekunden warten …")
-def load_vision_model():
+@st.cache_resource(show_spinner="🧠 KI-Modell wird geladen …")
+def _onnx_session():
+    """ONNX-Fallback (ImageNet) — nur falls Teachable/TF fehlt."""
     try:
         import onnxruntime as ort
-        lp = Path("imagenet_labels.json")
-        labels = json.loads(lp.read_text(encoding="utf-8"))
-        eff = _ensure_model("efficientnet-lite4.onnx")
-        if eff:
-            session = ort.InferenceSession(str(eff), providers=["CPUExecutionProvider"])
-            return session, labels, "effnet"
-        mp = _ensure_model("mobilenetv2.onnx")
-        if mp:
-            session = ort.InferenceSession(str(mp), providers=["CPUExecutionProvider"])
-            return session, labels, "mobilenet"
-        return None
+        import urllib.request
+
+        rel = "https://github.com/Liamlol1919/kath-fund/releases/download/models"
+        for fname in ("mobilenetv2.onnx",):
+            p = Path(fname)
+            if not (p.exists() and p.stat().st_size > 1000):
+                try:
+                    urllib.request.urlretrieve(f"{rel}/{fname}", p)
+                except Exception:
+                    continue
+            if p.exists() and p.stat().st_size > 1000:
+                labels = load_json(Path("imagenet_labels.json"), [])
+                if labels:
+                    sess = ort.InferenceSession(str(p), providers=["CPUExecutionProvider"])
+                    return sess, labels
     except Exception:
-        return None
+        pass
+    return None
 
 
-def _softmax(v):
-    v = v - np.max(v)
-    e = np.exp(v)
-    return e / np.sum(e)
+_ONNX_TO_KAT = {
+    "backpack": "Rucksäcke & Taschen", "purse": "Rucksäcke & Taschen",
+    "handbag": "Rucksäcke & Taschen", "wallet": "Schlüssel & Wertsachen",
+    "water bottle": "Trinkflaschen & Brotdosen", "bottle": "Trinkflaschen & Brotdosen",
+    "coffee mug": "Trinkflaschen & Brotdosen", "cup": "Trinkflaschen & Brotdosen",
+    "t-shirt": "Kleidung & Textilien", "jersey": "Kleidung & Textilien",
+    "jacket": "Kleidung & Textilien", "running shoe": "Sportbekleidung",
+    "pencil box": "Schulmaterial & Bücher", "calculator": "Schulmaterial & Bücher",
+    "headphone": "Elektronik & Kabel", "laptop computer": "Elektronik & Kabel",
+    "mobile phone": "Elektronik & Kabel", "padlock": "Schlüssel & Wertsachen",
+}
 
 
-def analyze_image_ai(pil_image):
-    vision = load_vision_model()
-    if vision is not None:
+def analyze(pil_image: Image.Image) -> dict:
+    """Einheitliche Analyse: Teachable-h5 → ONNX → Heuristik."""
+    res = predict_teachable(pil_image)
+    if res is not None:
+        return res
+    sess = _onnx_session()
+    if sess is not None:
         try:
-            session, labels, kind = vision
-            image = ImageOps.fit(pil_image.convert("RGB"), (224, 224), Image.Resampling.LANCZOS)
-            if kind == "effnet":
-                # EfficientNet-Lite: NHWC, float 0-255 (skalierung passiert im graphen)
-                arr = np.asarray(image, dtype=np.float32)[None, ...]
-            else:
-                # MobileNetV2: NCHW, normalisiert
-                a = np.asarray(image, dtype=np.float32) / 255.0
-                a = (a - np.array([.485, .456, .406], dtype=np.float32)) / np.array([.229, .224, .225], dtype=np.float32)
-                arr = np.transpose(a, (2, 0, 1))[None, ...]
-            out = session.run(None, {session.get_inputs()[0].name: arr})[0][0].astype(np.float64)
-            probs = _softmax(out)
-            ranked = np.argsort(probs)[::-1]
-            # nur unsere fundstueck-klassen als kandidaten, dann renormalisieren:
-            # ergibt echte aussagekraeftige wahrscheinlichkeiten statt "35 % blabla"
-            name = "EfficientNet-Lite4" if kind == "effnet" else "MobileNetV2"
-            # fall a: die beste gesamt-einschaetzung ist direkt eine fund-klasse
-            best_raw = int(ranked[0])
-            best_label = str(labels[best_raw]).lower().replace("_", " ")
-            if best_label in VISION_CLASS_TO_CATEGORY:
-                margin = (probs[best_raw] - probs[ranked[1]]) / (probs[best_raw] + 1e-9)
-                conf = float(np.clip(0.78 + margin * 0.2, 0.72, 0.94))
-                return VISION_CLASS_TO_CATEGORY[best_label], conf, f"{name} · {best_label}"
-            # fall b: beste fund-klasse innerhalb der top-60, renormalisiert
-            cand_idx = [int(i) for i in ranked[:60]
-                        if str(labels[int(i)]).lower().replace("_", " ") in VISION_CLASS_TO_CATEGORY]
-            if cand_idx:
-                sub = probs[cand_idx]
-                sub = sub / sub.sum()
-                j = int(np.argmax(sub))
-                idx = cand_idx[j]
-                label = str(labels[idx]).lower().replace("_", " ")
-                cat = VISION_CLASS_TO_CATEGORY[label]
-                conf = float(np.clip(0.40 + sub[j] * 0.5, 0.40, 0.82))
-                return cat, conf, f"{name} · {label}"
+            session, labels = sess
+            from PIL import ImageOps
+
+            img = ImageOps.fit(pil_image.convert("RGB"), (224, 224), Image.Resampling.LANCZOS)
+            a = np.asarray(img, dtype=np.float32) / 255.0
+            a = (a - np.array([0.485, 0.456, 0.406], dtype=np.float32)) / np.array(
+                [0.229, 0.224, 0.225], dtype=np.float32
+            )
+            arr = np.transpose(a, (2, 0, 1))[None, ...]
+            out = session.run(None, {session.get_inputs()[0].name: arr})[0][0]
+            out = out - out.max()
+            probs = np.exp(out) / np.exp(out).sum()
+            ranked = np.argsort(probs)[::-1][:60]
+            for i in ranked:
+                name = str(labels[int(i)]).lower().replace("_", " ")
+                if name in _ONNX_TO_KAT:
+                    return {
+                        "label": name.title(),
+                        "confidence": float(np.clip(probs[int(i)] * 2.2, 0.4, 0.9)),
+                        "category": _ONNX_TO_KAT[name],
+                        "top3": [],
+                        "engine": "MobileNetV2-ImageNet (Fallback)",
+                    }
         except Exception:
             pass
-    rgb = pil_image.convert("RGB")
-    w, h = rgb.size
-    arr = np.asarray(rgb.resize((64, 64)), dtype=np.float32)
-    std = arr.std(axis=(0, 1)).mean()
-    r, g, b = arr.mean(axis=(0, 1))
-    if std < 18 and r < 80 and g < 80 and b < 80:
-        return "Elektronik & Kabel", 0.5, "Bildmerkmale · unsicher"
-    if w / float(h) < 0.62 or w / float(h) > 1.7:
-        return "Trinkflaschen & Brotdosen", 0.5, "Bildmerkmale · unsicher"
-    return "Sonstiges", 0.35, "Kein Modell verfügbar"
+    out = heuristic_guess(pil_image)
+    return out
 
 
 # =============================================================================
-# 4. AKTIONEN (via Query-Params)
+# 4. Theme & Header (shadcn)
 # =============================================================================
-
-qp = st.query_params
-items = st.session_state["items"]
-claims = st.session_state["claims"]
-heute = datetime.date.today().isoformat()
-
-
-def parent_refresh(msg=""):
-    st.session_state["flash"] = msg
-    for k in list(qp.keys()):
-        del qp[k]
-    st.rerun()
-
-
-action = qp.get("action", "")
-
-if action == "claim":
-    iid = int(qp.get("item", 0))
-    name = qp.get("name", "").strip()
-    proof = qp.get("proof", "").strip()
-    if name and proof:
-        item = next((i for i in items if i["id"] == iid), None)
-        if item and item["status"] in ("Offen", "Beansprucht"):
-            new_id = max([c["claim_id"] for c in claims], default=500) + 1
-            claims.insert(0, {"claim_id": new_id, "item_id": iid, "name": name,
-                              "proof": proof, "datum": heute, "status": "In Prüfung"})
-            item["status"] = "Beansprucht"
-            save_json(ITEMS_FILE, items)
-            save_json(CLAIMS_FILE, claims)
-            parent_refresh(f"Anspruch auf „{item['titel']}“ eingereicht — wir melden uns.")
-    parent_refresh("Bitte Name und Nachweis ausfüllen.")
-
-elif action == "report_done":
-    parent_refresh("")
-
-# =============================================================================
-# 5. REPORT-ANSICHT (nativ, wegen Datei-Upload)
-# =============================================================================
-
-# =============================================================================
-# 5b. VERSTECKTE NATIVE AKTIONS-WIDGETS (das äußere iframe klickt sie per DOM)
-# =============================================================================
-
-st.markdown("""
-<style>
-  .st-key-kfund_report_upload, .st-key-kfund_report_camera,
-  .st-key-kfund_claim_name, .st-key-kfund_claim_proof, .st-key-kfund_claim_item,
-  .st-key-kfund_claim_submit, .st-key-kfund_home {
-    position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none;
-  }
-</style>
-""", unsafe_allow_html=True)
-
-if st.button("OPEN_REPORT_UPLOAD", key="kfund_report_upload"):
-    st.session_state["native_view"] = "report"
-    st.session_state["up_mode_default"] = "Datei hochladen"
-    st.rerun()
-if st.button("OPEN_REPORT_CAMERA", key="kfund_report_camera"):
-    st.session_state["native_view"] = "report"
-    st.session_state["up_mode_default"] = "Kamera"
-    st.rerun()
-if st.button("KFUND_HOME", key="kfund_home"):
-    st.session_state["native_view"] = None
-    st.rerun()
-
-c_name = st.text_input("claim name", key="kfund_claim_name")
-c_proof = st.text_input("claim proof", key="kfund_claim_proof")
-c_item = st.text_input("claim item", key="kfund_claim_item")
-if st.button("SUBMIT_CLAIM", key="kfund_claim_submit"):
-    _name = (st.session_state.get("kfund_claim_name") or "").strip()
-    _proof = (st.session_state.get("kfund_claim_proof") or "").strip()
-    try:
-        _iid = int(st.session_state.get("kfund_claim_item") or 0)
-    except ValueError:
-        _iid = 0
-    if _name and _proof:
-        _item = next((i for i in st.session_state["items"] if i["id"] == _iid), None)
-        if _item and _item["status"] in ("Offen", "Beansprucht"):
-            _nid = max([c["claim_id"] for c in st.session_state["claims"]], default=500) + 1
-            st.session_state["claims"].insert(0, {
-                "claim_id": _nid, "item_id": _iid, "name": _name, "proof": _proof,
-                "datum": heute, "status": "In Prüfung"})
-            _item["status"] = "Beansprucht"
-            save_json(ITEMS_FILE, st.session_state["items"])
-            save_json(CLAIMS_FILE, st.session_state["claims"])
-            st.session_state["flash"] = f"Anspruch auf „{_item['titel']}“ eingereicht."
-    else:
-        st.session_state["flash"] = "Bitte Name und Nachweis ausfüllen."
-    for k in ("kfund_claim_name", "kfund_claim_proof", "kfund_claim_item"):
-        st.session_state[k] = ""
-    st.session_state["native_view"] = None
-    st.rerun()
-
-if st.session_state["native_view"] == "report":
-    st.markdown("""
+st.markdown(
+    """
     <style>
-      .stApp { background: #EDECE8; }
-      header[data-testid="stHeader"] { display: none !important; }
-      .block-container { padding: 0 !important; max-width: 100% !important; }
-      .report-wrap { max-width: 560px; margin: 0 auto; padding: 1.2rem 1rem 4rem; }
-      .rp-title { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; margin-top: .6rem; }
-      .rp-sub { color: #71717A; margin-bottom: .4rem; font-size: .92rem; }
-      .rp-card { background: #fff; border: 1px solid #D6D5D1; border-radius: 16px;
-                 box-shadow: 0 1px 2px rgba(0,0,0,.05); padding: 18px 20px; margin-top: 14px; }
-      .rp-card h3 { font-size: .72rem; font-weight: 700; text-transform: uppercase;
-                    letter-spacing: .08em; color: #71717A; margin: 0 0 .8rem; }
-      .vcard { background: #fff; border: 1px solid #D6D5D1; border-radius: 14px;
-               box-shadow: 0 1px 2px rgba(0,0,0,.05); padding: 16px 18px; margin-top: 12px;
-               display:flex; gap:14px; align-items:center; }
-      .vstamp { background:#F6DEDA; color:#B23A2A; font-weight:700; font-size:.72rem;
-                padding:6px 10px; border-radius:8px; white-space:nowrap; }
-      /* inputs im report */
-      .report-wrap input, .report-wrap textarea {
-        background: #fff !important; border: 1px solid #D6D5D1 !important;
-        border-radius: 10px !important; padding: .55rem .8rem !important; font-size: .92rem !important;
-      }
-      .report-wrap input:focus, .report-wrap textarea:focus {
-        border-color: #B23A2A !important; box-shadow: 0 0 0 3px rgba(178,58,42,.12) !important; outline: none;
-      }
-      .report-wrap label { font-size: .78rem !important; font-weight: 600 !important; color: #44403A !important; }
-      .report-wrap [data-testid="stForm"] { background: #fff; border: 1px solid #D6D5D1;
-        border-radius: 16px; padding: 20px 20px 8px; box-shadow: 0 1px 2px rgba(0,0,0,.05); margin-top: 14px; }
-      .report-wrap [data-testid="stFormSubmitButton"] button {
-        background: #B23A2A !important; color: #fff !important; border: none !important;
-        border-radius: 999px !important; font-weight: 600 !important; padding: .65rem 1.4rem !important;
-      }
-      .report-wrap [data-testid="stRadio"] [role="radiogroup"] { gap: .4rem; }
-      .report-wrap [data-testid="stRadio"] label {
-        border: 1px solid #D6D5D1 !important; border-radius: 999px !important;
-        padding: .3rem .9rem !important; background: #fff;
-      }
-      .report-wrap [data-testid="stRadio"] label:has(input:checked) { background: #18181B; border-color: #18181B; }
-      .report-wrap [data-testid="stRadio"] label:has(input:checked) p { color: #fff !important; }
-      .rp-back { border: 1px solid #D6D5D1; background: #fff; border-radius: 999px;
-                 padding: 6px 14px; font-size: .85rem; cursor: pointer; }
-      .rp-back:hover { background: #F4F4F5; }
+      .stApp { background: #F7F5F0; }
+      header[data-testid="stHeader"] { background: rgba(247,245,240,.85); }
+      section[data-testid="stSidebar"] { display: none; }
+      h1.kath-title { font-weight: 800; letter-spacing: -.03em; margin: 0;
+                      font-size: clamp(1.7rem, 4vw, 2.6rem); }
+      p.kath-sub { color: #71717A; margin: .15rem 0 0; }
+      .kath-hero { background: linear-gradient(135deg, #B23A2A, #7C2418);
+                   color: #fff; border-radius: 1.1rem; padding: 1.6rem 1.8rem;
+                   box-shadow: 0 12px 32px rgba(178,58,42,.25); }
+      .kath-hero h2 { margin: 0; font-size: 1.5rem; letter-spacing: -.02em; }
+      .kath-hero p { margin: .35rem 0 0; opacity: .9; }
     </style>
-    <div class="report-wrap">
-    <button class="rp-back" onclick="window.parent.postMessage({ kfund: 'home' }, '*')">← Zurück zur App</button>
-    <div class="rp-title">📷 Fund melden</div>
-    <div class="rp-sub">Foto aufnehmen oder hochladen — Kategorie wird automatisch vorgeschlagen.
-    Nach dem Eintrag landet das Fundstück direkt im Verzeichnis.</div></div>
-    """, unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
-    uploaded_pil = None
-    up_mode = st.radio("Quelle", ["Kamera", "Datei hochladen"], horizontal=True,
-                       index=0 if st.session_state.get("up_mode_default") == "Kamera" else 1)
-    if up_mode == "Datei hochladen":
-        f = st.file_uploader("Foto", type=["jpg", "jpeg", "png", "webp"], label_visibility="collapsed")
+head_l, head_r = st.columns([1, 5])
+with head_l:
+    logo = Path("assets/logo_new.png")
+    if logo.exists():
+        st.image(str(logo), width=110)
     else:
-        f = st.camera_input("Kamera", label_visibility="collapsed")
-    if f is not None:
-        uploaded_pil = Image.open(f).convert("RGB")
+        ui.avatar(fallback="K", size="large")
+with head_r:
+    st.markdown('<h1 class="kath-title">kath.fund 🎒</h1>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="kath-sub">Digitales Fundbüro · Katharineum zu Lübeck · '
+        "Foto hochladen, KI erkennt's, abholen.</p>",
+        unsafe_allow_html=True,
+    )
+    ui.badges(
+        [
+            ("Katharineum zu Lübeck", "default"),
+            ("Hausmeisterbüro · Raum 001", "secondary"),
+            ("KI-Bilderkennung aktiv", "outline"),
+        ]
+    )
+ui.separator()
 
-    ai_cat, ai_conf, ai_engine = "Sonstiges", 0.0, "Standby"
-    if uploaded_pil is not None:
-        prev = uploaded_pil.copy()
-        prev.thumbnail((560, 560), Image.Resampling.LANCZOS)
-        _, im_c, _ = st.columns([1, 2.2, 1])
-        with im_c:
-            st.image(prev, width=300)
-        with st.spinner("Kategorie wird erkannt — erste Erkennung lädt das Modell (~10 s), danach geht's schnell …"):
-            ai_cat, ai_conf, ai_engine = analyze_image_ai(uploaded_pil)
-        st.markdown(f"""
-        <div class="vcard"><span class="vstamp">Vorschlag</span>
-        <div><b style="font-size:1.05rem">{html_mod.escape(ai_cat)}</b>
-        <div style="font-size:.75rem;color:#6E6862">Sicherheit {ai_conf*100:.0f} % · {html_mod.escape(ai_engine)}</div>
-        </div></div>""", unsafe_allow_html=True)
-        if ai_conf < 0.5:
-            st.info("Unsicherer Vorschlag — bitte Kategorie unten prüfen.")
+# =============================================================================
+# 5. Tabs (gesteuert → Karten können per Klick springen)
+# =============================================================================
+tab = ui.tabs(TABS, value=st.session_state.get("tab", TABS[0]), key="main_tabs")
+st.session_state["tab"] = tab
+show_flash()
 
-    # auto-fill: vorschlaege nach erkennung vorbefuellen (ueberschreibbar)
-    ai_label = ai_engine.split("·")[-1].strip() if "·" in ai_engine else ""
-    if ai_label and ai_label.lower() not in ("standby", "kein modell verfügbar", "bildmerkmale · unsicher"):
-        suggestion = ai_label.title()
+
+def goto(view: str, category: str | None = None) -> None:
+    st.session_state["tab"] = view
+    if category is not None:
+        st.session_state["fkat"] = category
+    st.session_state["selected_id"] = None
+    st.rerun()
+
+
+def item_by_id(item_id: int) -> dict | None:
+    return next((i for i in items if i.get("id") == item_id), None)
+
+
+def status_badge(status: str) -> None:
+    ui.badge(status, variant=STATUS_VARIANT.get(status, "secondary"))
+
+
+def thumb(item: dict, width: int = 400) -> None:
+    img = load_item_image(item.get("image_file"))
+    if img is not None:
+        st.image(img, use_container_width=True)
     else:
-        suggestion = ""
-    if suggestion and not st.session_state.get("rep_titel"):
-        st.session_state["rep_titel"] = suggestion
-    if suggestion and not st.session_state.get("rep_tags"):
-        st.session_state["rep_tags"] = ", ".join(w.capitalize() for w in ai_label.split()[:2])
+        st.markdown(
+            f"<div style='font-size:3rem;text-align:center;padding:1rem;'>"
+            f"{KAT_EMOJI.get(item.get('kategorie', ''), '📦')}</div>",
+            unsafe_allow_html=True,
+        )
 
-    with st.form("report_form"):
-        t = st.text_input("Bezeichnung*", key="rep_titel",
-                          placeholder="z. B. Dunkelblaue Regenjacke, Größe M")
-        kat = st.selectbox("Kategorie*", CATEGORIES,
-                           index=CATEGORIES.index(ai_cat) if ai_cat in CATEGORIES else len(CATEGORIES) - 1)
-        c1, c2 = st.columns(2)
-        ort = c1.selectbox("Fundort*", LOCATIONS)
-        lager = c2.text_input("Lagerort*", value="Hausmeisterbüro (Raum 001)")
-        tags = st.text_input("Schlagworte", key="rep_tags",
-                             placeholder="kommagetrennt: Nike, Blau, Größe L")
-        desc = st.text_area("Besondere Merkmale", placeholder="Kratzer, Initialen, Inhalt …")
-        if st.form_submit_button("Ins Fundbuch eintragen", type="primary", use_container_width=True):
-            if not t.strip():
-                st.error("Bitte eine Bezeichnung angeben.")
+
+def open_items():
+    return [i for i in items if i.get("status") == "Offen"]
+
+
+# =============================================================================
+# 6. TAB: Entdecken
+# =============================================================================
+if tab == "Entdecken":
+    st.markdown(
+        "<div class='kath-hero'><h2>Verloren? Gefunden? Ein Foto genügt. 📷</h2>"
+        "<p>Unsere KI erkennt Trinkflaschen, Schlüssel, Kopfhörer & Co. "
+        "automatisch — du meldest den Fund in unter einer Minute.</p></div>",
+        unsafe_allow_html=True,
+    )
+    st.write("")
+
+    n_offen = len(open_items())
+    neu_grenze = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
+    n_neu = len([i for i in items if str(i.get("datum_fund", "")) >= neu_grenze])
+    n_abgeholt = len([i for i in items if i.get("status") == "Abgeholt"])
+
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        ui.metric_card("Offene Funde", n_offen, description="warten auf Abholung")
+    with m2:
+        ui.metric_card("Neu (7 Tage)", n_neu, description="frisch im Fundbüro")
+    with m3:
+        ui.metric_card("Bereits abgeholt", n_abgeholt, description="erfolgreich vermittelt 🎉")
+    with m4:
+        ui.metric_card("Kategorien", len(CATEGORIES), description="von Jacke bis Taschenrechner")
+
+    st.write("")
+    ui.card(
+        title="Zwei Wege zum Ziel",
+        description="Wähle, was zu dir passt — alles andere übernimmt die App.",
+    )
+    c1, c2 = st.columns(2)
+    with c1:
+        ui.card(
+            title="📷 Etwas gefunden?",
+            content="Foto hochladen → KI schlägt Kategorie vor → eintragen. Fertig.",
+            footer="Dauert ca. 1 Minute.",
+        )
+        if ui.button("Fund melden", key="hero_report"):
+            goto("Fund melden")
+    with c2:
+        ui.card(
+            title="🔎 Etwas verloren?",
+            content="Verzeichnis durchsuchen, Fundstück wiedererkennen, Anspruch melden.",
+            footer=f"Aktuell {n_offen} offene Funde.",
+        )
+        if ui.button("Verzeichnis öffnen", key="hero_search", variant="secondary"):
+            goto("Verzeichnis")
+
+    st.write("")
+    st.subheader("Kategorien")
+    cols = st.columns(4)
+    for idx, kat in enumerate(CATEGORIES):
+        count = len([i for i in items if i.get("kategorie") == kat])
+        with cols[idx % 4]:
+            ui.card(
+                title=f"{KAT_EMOJI.get(kat, '📦')} {kat}",
+                description=f"{count} Fundstück(e)",
+            )
+            if ui.button("Ansehen", key=f"kat_{idx}", variant="outline"):
+                goto("Verzeichnis", category=kat)
+
+    st.write("")
+    st.subheader("Neu im Fundbüro")
+    fresh = sorted(items, key=lambda i: str(i.get("datum_fund", "")), reverse=True)[:4]
+    if not fresh:
+        ui.alert("Noch ganz leer hier", "Melde den ersten Fund über „Fund melden“.")
+    else:
+        cols = st.columns(4)
+        for idx, it in enumerate(fresh):
+            with cols[idx % 4]:
+                thumb(it)
+                st.markdown(f"**{it.get('titel', 'Fundstück')}**")
+                st.caption(f"#{it.get('id')} · {it.get('fundort', '')}")
+                status_badge(it.get("status", "Offen"))
+                if ui.button("Details", key=f"new_{it.get('id')}", variant="secondary"):
+                    st.session_state["selected_id"] = it.get("id")
+                    goto("Verzeichnis")
+
+# =============================================================================
+# 7. TAB: Verzeichnis (Suche + Detail + Anspruch)
+# =============================================================================
+elif tab == "Verzeichnis":
+    sel = st.session_state.get("selected_id")
+
+    if sel is not None and (detail := item_by_id(sel)) is not None:
+        # ---------------- Detailansicht ----------------
+        if ui.button("← Zurück zum Verzeichnis", key="back", variant="ghost"):
+            st.session_state["selected_id"] = None
+            st.rerun()
+
+        st.markdown(f"## {detail.get('titel', 'Fundstück')}")
+        ui.badges(
+            [
+                (f"#{detail.get('id')}", "secondary"),
+                (detail.get("kategorie", ""), "default"),
+                (detail.get("status", ""), STATUS_VARIANT.get(detail.get("status", ""), "secondary")),
+            ]
+        )
+        st.write("")
+        d1, d2 = st.columns([3, 2])
+        with d1:
+            img = load_item_image(detail.get("image_file"))
+            if img is not None:
+                st.image(img, use_container_width=True)
             else:
-                new_id = max([i["id"] for i in items], default=1000) + 1
-                img_name = save_uploaded_image(uploaded_pil, new_id) if uploaded_pil is not None else None
-                parsed = [x.strip() for x in tags.split(",") if x.strip()] or [ai_cat.split(" ")[0]]
-                items.insert(0, {
-                    "id": new_id, "titel": t.strip(), "kategorie": kat, "fundort": ort,
-                    "abgabeort": lager.strip() or "Hausmeisterbüro (Raum 001)",
+                st.markdown(
+                    f"<div style='font-size:5rem;text-align:center;padding:2rem;'>"
+                    f"{KAT_EMOJI.get(detail.get('kategorie', ''), '📦')}</div>",
+                    unsafe_allow_html=True,
+                )
+            tags = detail.get("tags", []) or []
+            if tags:
+                ui.badges([(t, "outline") for t in tags])
+        with d2:
+            ui.card(
+                title="Funddaten",
+                content=(
+                    f"Kategorie: {detail.get('kategorie', '')}\n"
+                    f"Fundort: {detail.get('fundort', '')}\n"
+                    f"Gefunden: {detail.get('datum_fund', '')}\n"
+                    f"Lagerort: {detail.get('abgabeort', '')}\n"
+                    f"Abholen bis: {detail.get('datum_ablauf', '')}"
+                ),
+                description=detail.get("beschreibung", ""),
+            )
+            st.write("")
+            if detail.get("status") in ("Offen", "Beansprucht"):
+                ui.card(
+                    title="Das ist meins 🙋",
+                    description="Name + Nachweis angeben — das Sekretariat prüft den Anspruch.",
+                )
+                ui.input("Name und Klasse", key="claim_name", placeholder="z. B. Julia K., 9b")
+                ui.textarea(
+                    "Nachweis",
+                    key="claim_proof",
+                    placeholder="Was weiß nur der Besitzer? Inhalt, Gravur, Initialen …",
+                    rows=3,
+                )
+                if ui.button("Anspruch einreichen", key="claim_go"):
+                    name = (st.session_state.get("claim_name") or "").strip()
+                    proof = (st.session_state.get("claim_proof") or "").strip()
+                    if not name or not proof:
+                        flash("error", "Fast geschafft", "Bitte Name und Nachweis ausfüllen.")
+                        st.rerun()
+                    new_id = max([c.get("claim_id", 500) for c in claims], default=500) + 1
+                    claims.insert(
+                        0,
+                        {
+                            "claim_id": new_id, "item_id": detail["id"],
+                            "name": name, "proof": proof,
+                            "datum": heute, "status": "In Prüfung",
+                        },
+                    )
+                    detail["status"] = "Beansprucht"
+                    save_all()
+                    for k in ("claim_name", "claim_proof"):
+                        st.session_state.pop(k, None)
+                    flash("ok", "Anspruch eingereicht ✅", "Wir melden uns — bitte Ausweis mitbringen.")
+                    st.rerun()
+            else:
+                ui.alert("Bereits abgeholt", "Dieses Fundstück wurde schon vermittelt. 🎉")
+    else:
+        # ---------------- Such- & Listenansicht ----------------
+        st.subheader("Verzeichnis durchsuchen")
+        q = ui.input(
+            "Suche", value="", key="q", placeholder="Jacke, AirPods, #1002 …", type="search"
+        )
+        f1, f2, f3 = st.columns([2, 2, 1])
+        with f1:
+            fkat = ui.select("Kategorie", ["Alle", *CATEGORIES], key="fkat")
+        with f2:
+            fstat = ui.select("Status", ["Alle", *STATUSES], key="fstat")
+        with f3:
+            st.write("")
+            if ui.button("Zurücksetzen", key="reset", variant="ghost"):
+                for k in ("q", "fkat", "fstat"):
+                    st.session_state.pop(k, None)
+                st.rerun()
+
+        def matches(it: dict) -> bool:
+            if fkat != "Alle" and it.get("kategorie") != fkat:
+                return False
+            if fstat != "Alle" and it.get("status") != fstat:
+                return False
+            if (qq := (q or "").strip().lower()):
+                hay = " ".join(
+                    [
+                        str(it.get("titel", "")), str(it.get("beschreibung", "")),
+                        str(it.get("fundort", "")), str(it.get("kategorie", "")),
+                        f"#{it.get('id')}", " ".join(it.get("tags", []) or []),
+                    ]
+                ).lower()
+                return all(w in hay for w in qq.split())
+            return True
+
+        hits = sorted(
+            [i for i in items if matches(i)],
+            key=lambda i: str(i.get("datum_fund", "")),
+            reverse=True,
+        )
+        st.caption(f"**{len(hits)}** Treffer" + (f" in „{fkat}“" if fkat != "Alle" else ""))
+
+        if not hits:
+            ui.alert(
+                "Keine Treffer",
+                "Anderen Suchbegriff versuchen — oder direkt einen Fund melden.",
+            )
+            if ui.button("Zum Meldeformular", key="nohit", variant="secondary"):
+                goto("Fund melden")
+        else:
+            for row in range(0, len(hits), 3):
+                cols = st.columns(3)
+                for k, it in enumerate(hits[row : row + 3]):
+                    with cols[k]:
+                        thumb(it)
+                        st.markdown(f"**{it.get('titel', 'Fundstück')}**")
+                        st.caption(f"#{it.get('id')} · {it.get('fundort', '')}")
+                        status_badge(it.get("status", "Offen"))
+                        if ui.button("Ansehen", key=f"view_{it.get('id')}", variant="outline"):
+                            st.session_state["selected_id"] = it.get("id")
+                            st.rerun()
+
+# =============================================================================
+# 8. TAB: Fund melden (Foto → KI → Formular)
+# =============================================================================
+elif tab == "Fund melden":
+    st.subheader("Fund melden 📷")
+    ui.card(
+        title="So geht's",
+        description="1) Foto hochladen   2) KI-Erkennung starten   3) Vorschlag prüfen & eintragen.",
+    )
+
+    src = st.radio("Quelle", ["Datei hochladen", "Kamera"], horizontal=True, key="rep_src")
+    if src == "Datei hochladen":
+        up = st.file_uploader(
+            "Foto", type=["jpg", "jpeg", "png", "webp"], label_visibility="collapsed",
+            key=f"up_{st.session_state['uploader_nonce']}",
+        )
+    else:
+        up = st.camera_input("Kamera", label_visibility="collapsed",
+                             key=f"cam_{st.session_state['uploader_nonce']}")
+    if up is not None:
+        st.session_state["rep_bytes"] = up.getvalue()
+
+    if st.session_state.get("rep_bytes"):
+        pil = Image.open(io.BytesIO(st.session_state["rep_bytes"])).convert("RGB")
+        p1, p2 = st.columns([2, 3])
+        with p1:
+            st.image(pil, caption="Vorschau", use_container_width=True)
+        with p2:
+            if ui.button("🔎 Jetzt per KI erkennen", key="ai_go"):
+                with st.spinner("KI analysiert das Foto … (erster Start lädt das Modell)"):
+                    st.session_state["rep_ai"] = analyze(pil)
+                ai = st.session_state["rep_ai"]
+                st.session_state["rep_titel_ai"] = ai["label"].capitalize()
+                st.session_state["rep_kat_ai"] = ai.get("category", "Sonstiges")
+                if ai.get("category") in CATEGORIES:
+                    st.session_state["rep_kat"] = ai["category"]
+                st.rerun()
+
+            ai = st.session_state.get("rep_ai")
+            if ai:
+                ui.card(
+                    title=f"Vorschlag: {ai['label'].capitalize()}",
+                    description=f"{ai['engine']} · Kategorie „{ai['category']}“",
+                )
+                ui.progress(
+                    min(100.0, max(0.0, ai["confidence"] * 100.0)),
+                    label="Sicherheit", show_value=True,
+                )
+                if ai.get("top3"):
+                    st.caption("Top-3 der KI:")
+                    for lab, prob in ai["top3"]:
+                        st.write(f"{lab.capitalize()} — {prob * 100:.0f} %")
+                        ui.progress(prob * 100.0, show_value=False)
+                if ai["confidence"] < 0.5:
+                    ui.alert(
+                        "Unsicherer Vorschlag",
+                        "Bitte Kategorie und Titel unten von Hand prüfen.",
+                    )
+        st.write("")
+        ui.separator()
+        st.subheader("Eintragen")
+        ai = st.session_state.get("rep_ai") or {}
+        titel = ui.input(
+            "Bezeichnung", value=st.session_state.get("rep_titel_ai", ""),
+            key="rep_titel", placeholder="z. B. Blaue Trinkflasche, 0,75 L",
+        )
+        kat_opts = CATEGORIES
+        kat_default = st.session_state.get("rep_kat_ai")
+        kat = ui.select(
+            "Kategorie", kat_opts,
+            index=kat_opts.index(kat_default) if kat_default in kat_opts else len(kat_opts) - 1,
+            key="rep_kat",
+        )
+        r1, r2 = st.columns(2)
+        with r1:
+            ort = ui.select("Fundort", LOCATIONS, key="rep_ort")
+        with r2:
+            lager = ui.input("Lagerort", value="Hausmeisterbüro (Raum 001)", key="rep_lager")
+        tags_raw = ui.input("Schlagworte (kommagetrennt)", key="rep_tags",
+                            placeholder="Nike, Blau, Größe L")
+        desc = ui.textarea("Besondere Merkmale", key="rep_desc",
+                           placeholder="Kratzer, Initialen, Inhalt …", rows=3)
+
+        if ui.button("Ins Fundbuch eintragen ✅", key="rep_save"):
+            if not (titel or "").strip():
+                flash("error", "Titel fehlt", "Bitte eine Bezeichnung angeben.")
+                st.rerun()
+            new_id = max([i.get("id", 1000) for i in items], default=1000) + 1
+            img_name = save_uploaded_image(pil, new_id)
+            parsed = [x.strip() for x in (tags_raw or "").split(",") if x.strip()] or [
+                (ai.get("label") or kat).capitalize()
+            ]
+            items.insert(
+                0,
+                {
+                    "id": new_id, "titel": titel.strip(), "kategorie": kat,
+                    "fundort": ort, "abgabeort": (lager or "").strip() or "Hausmeisterbüro (Raum 001)",
                     "datum_fund": heute,
                     "datum_ablauf": (datetime.date.today() + datetime.timedelta(days=90)).isoformat(),
-                    "status": "Offen", "beschreibung": desc.strip() or "Keine nähere Beschreibung.",
-                    "image_file": img_name, "tags": parsed})
-                save_json(ITEMS_FILE, items)
-                st.session_state["flash"] = f"Fundstück „{t.strip()}“ wurde eingetragen 🎉"
-                for k in ("rep_titel", "rep_tags"):
-                    st.session_state.pop(k, None)
-                st.session_state["native_view"] = None
-                st.rerun()
-    st.stop()
+                    "status": "Offen",
+                    "beschreibung": (desc or "").strip() or "Keine nähere Beschreibung.",
+                    "image_file": img_name, "tags": parsed,
+                },
+            )
+            save_all()
+            st.session_state["rep_bytes"] = None
+            st.session_state["rep_ai"] = None
+            st.session_state["rep_titel_ai"] = ""
+            st.session_state["rep_kat_ai"] = None
+            for k in ("rep_titel", "rep_kat", "rep_ort", "rep_lager", "rep_tags", "rep_desc"):
+                st.session_state.pop(k, None)
+            st.session_state["uploader_nonce"] += 1
+            st.session_state["last_id"] = new_id
+            st.session_state["show_done_dialog"] = True
+            st.rerun()
+    else:
+        ui.alert(
+            "Noch kein Foto",
+            "Lade oben ein Foto hoch oder nutze die Kamera — danach startet die KI.",
+        )
+        with st.expander("Fototipps 💡"):
+            st.markdown(
+                "- Gute Belichtung, ruhiger Hintergrund\n"
+                "- Gegenstand vollständig & formatfüllend\n"
+                "- Keine Personen auf dem Foto"
+            )
+
+    if st.session_state.get("show_done_dialog"):
+        lid = st.session_state.get("last_id")
+        choice = ui.alert_dialog(
+            True,
+            "Eingetragen! 🎉",
+            f"Fundstück #{lid} ist jetzt im Verzeichnis. Wie geht's weiter?",
+            confirm_label="Weiteren Fund melden",
+            cancel_label="Zum Verzeichnis",
+            key="done_dialog",
+        )
+        if choice is True:
+            st.session_state["show_done_dialog"] = False
+            st.rerun()
+        elif choice is False:
+            st.session_state["show_done_dialog"] = False
+            goto("Verzeichnis")
 
 # =============================================================================
-# 6. UI (HTML mit daisyUI, im component-iframe)
+# 9. TAB: Dashboard
 # =============================================================================
+elif tab == "Dashboard":
+    st.subheader("Dashboard 📊")
+    counts_kat = [
+        {"Kategorie": k, "Anzahl": len([i for i in items if i.get("kategorie") == k])}
+        for k in CATEGORIES
+    ]
+    counts_stat: dict[str, int] = {}
+    for i in items:
+        s = i.get("status", "Offen")
+        counts_stat[s] = counts_stat.get(s, 0) + 1
 
-neu_grenze = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
-items_json = []
-for it in items:
-    it2 = dict(it)
-    it2["img"] = img_uri(it.get("image_file"))
-    it2["icon"] = KAT_ICON.get(it.get("kategorie", ""), "📦")
-    it2["neu"] = str(it.get("datum_fund", "")) >= neu_grenze
-    items_json.append(it2)
+    d1, d2 = st.columns(2)
+    with d1:
+        ui.metric_card(
+            "Vermittlungsquote",
+            f"{(counts_stat.get('Abgeholt', 0) / max(1, len(items)) * 100):.0f} %",
+            description=f"{counts_stat.get('Abgeholt', 0)} von {len(items)} abgeholt",
+        )
+    with d2:
+        ui.metric_card(
+            "Offene Ansprüche",
+            len([c for c in claims if c.get("status") == "In Prüfung"]),
+            description="warten auf Prüfung im Sekretariat",
+        )
 
-claims_json = st.session_state["claims"]
-flash = st.session_state["flash"]
-st.session_state["flash"] = ""
+    st.write("")
+    import pandas as pd
 
-wordmark = wordmark_uri()
-logo_top = logo_top_uri()
-hero_imgs = hero_uris()
-ipad_frame = file_uri("assets/ipad.png")
-logo_main = file_uri("assets/logo_new.png", 900) or logo_top
-data_json = json.dumps({"items": items_json, "wordmark": wordmark, "logoTop": logo_top,
-                        "hero": hero_imgs,
-                        "categories": CATEGORIES, "claims": len(claims_json)},
-                       ensure_ascii=False)
+    c1, c2 = st.columns(2)
+    with c1:
+        df_kat = pd.DataFrame([r for r in counts_kat if r["Anzahl"] > 0]) or pd.DataFrame(
+            [{"Kategorie": "–", "Anzahl": 0}]
+        )
+        ui.bar_chart(df_kat, x="Kategorie", y="Anzahl", title="Funde je Kategorie")
+    with c2:
+        stat_rows = [
+            {"Status": s, "Anzahl": n} for s, n in counts_stat.items() if n > 0
+        ][:5] or [{"Status": "–", "Anzahl": 0}]
+        df_stat = pd.DataFrame(stat_rows)
+        ui.pie_chart(df_stat, names="Status", values="Anzahl", title="Statusverteilung", donut=True)
 
-UI = r"""
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css"/>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  :root {
-    --bg: #EDECE8; --card: #FFFFFF; --fg: #18181B; --muted: #71717A;
-    --line: #D6D5D1; --line-dash: #C9C8C4; --accent: #DC2626; --accent-fg: #FEF2F2;
-    --ok: #16A34A; --info: #2563EB; --warn: #D97706;
-  }
-  * { -webkit-font-smoothing: antialiased; }
-  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg);
-         color: var(--fg); margin: 0; padding-top: 0; }
-  html, body { margin-top: 0 !important; }
-  .app { background: var(--bg); }
+    st.write("")
+    st.subheader("Zuletzt eingetragen")
+    recent = sorted(items, key=lambda i: str(i.get("datum_fund", "")), reverse=True)[:8]
+    if recent:
+        ui.table(
+            [
+                {
+                    "#": r.get("id"), "Titel": r.get("titel"),
+                    "Kategorie": r.get("kategorie"), "Fundort": r.get("fundort"),
+                    "Status": r.get("status"),
+                }
+                for r in recent
+            ],
+            caption="Die 8 neuesten Einträge",
+        )
+    else:
+        ui.alert("Keine Einträge", "Noch ist das Fundbuch leer.")
 
-  /* ---------- Typo & Basis (shadcn-Vibe) ---------- */
-  .lbl { font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-         color: var(--muted); }
-  h1 { font-weight: 800; letter-spacing: -.03em; }
-  .dots { background-image: radial-gradient(#C9C8C4 1px, transparent 1.2px); background-size: 16px 16px; }
-  .icard { background: var(--card); border: 1px solid var(--line); border-radius: .9rem; }
-  .icard-hover { transition: all .16s ease; }
-  .icard-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(24,24,27,.08);
-                       border-color: #C8C8CC; }
-  .clamp2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  .scroller { display:flex; gap:.75rem; overflow-x:auto; padding:.25rem .15rem .85rem;
-              scroll-snap-type:x proximity; scrollbar-width: thin; }
-  .scroller > * { flex:0 0 200px; scroll-snap-align:start; }
-  .scroller::-webkit-scrollbar { height: 5px; }
-  .scroller::-webkit-scrollbar-thumb { background:#D4D4D8; border-radius: 3px; }
-  dialog::backdrop { background: rgba(24,24,27,.5); backdrop-filter: blur(2px); }
-  /* drawer als echtes linkes panel (div-modal) */
-  #drawer { justify-content: flex-start !important; align-items: stretch !important; padding: 0 !important; }
-  #drawer .modal-box {
-    width: 18rem !important; max-width: 86vw !important;
-    height: 100dvh !important; max-height: none !important;
-    border-radius: 0 !important; margin: 0 !important; padding: 0 !important;
-    background: #fff !important; color: var(--fg);
-    box-shadow: 4px 0 24px rgba(24,24,27,.12);
-    transform: none !important; translate: none !important;
-  }
-  .btn-accent { background: var(--accent); color: #fff; border: none; }
-  .btn-accent:hover { background: #B91C1C; color:#fff; }
-  .chip { border:1px solid var(--line); background:#fff; color:var(--fg); border-radius:999px;
-          padding: .3rem .8rem; font-size:.78rem; font-weight:500; }
-  .chip.on { background: var(--fg); color:#fff; border-color: var(--fg); }
-  svg.lucide { width: 1.15em; height: 1.15em; vertical-align: -0.2em; }
-</style>
-</head>
-<body>
-<div class="app">
+    st.write("")
+    st.subheader("Gut zu wissen")
+    ui.accordion(
+        [
+            {
+                "value": "abholen",
+                "label": "Wie hole ich etwas ab?",
+                "content": "Fundstück im Verzeichnis finden, Anspruch mit Nachweis melden, "
+                "dann mit Schülerausweis im Hausmeisterbüro (Raum 001) oder im Sekretariat abholen.",
+            },
+            {
+                "value": "fristen",
+                "label": "Wie lange wird aufbewahrt?",
+                "content": "Fundsachen werden 90 Tage aufbewahrt. Danach werden sie gespendet oder entsorgt.",
+            },
+            {
+                "value": "ki",
+                "label": "Was erkennt die KI?",
+                "content": "Das Teachable-Machine-Modell (TestKI4) unterscheidet 11 Klassen: "
+                + ", ".join(load_teachable_labels())
+                + ". Die Kategorie lässt sich immer von Hand korrigieren.",
+            },
+        ]
+    )
 
-  <!-- floating sidebar-button + FAB -->
-  <button class="fixed top-3 left-3 z-40 w-10 h-10 rounded-xl bg-white border border-[var(--line)] shadow-sm flex items-center justify-center"
-          onclick="drawer.classList.add('modal-open')" aria-label="Menü">
-    <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-  </button>
-  <button class="fixed bottom-4 right-4 z-40 h-12 px-4 rounded-full btn-accent shadow-lg text-sm font-semibold flex items-center gap-2" onclick="openReport('camera')">
-    <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Melden
-  </button>
-
-  <!-- flash -->
-  <div id="flash" class="hidden px-4 pt-3">
-    <div class="icard px-4 py-3 flex items-center gap-2 text-sm border-[var(--ok)]/40 bg-[#F0FDF4]">
-      <svg class="lucide text-[var(--ok)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-      <span id="flashText"></span>
-    </div>
-  </div>
-
-  <!-- ============ HOME ============ -->
-  <div id="view-home" class="max-w-6xl mx-auto px-4 pb-10">
-    <div class="dots rounded-2xl -mx-4 px-4 pt-7 pb-5 relative overflow-hidden">
-      <div id="heroFly" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
-      <img src="__LOGO__" class="w-52 md:w-60 mx-auto" alt="kath.fund">
-    </div>
-
-    <form class="join w-full mt-4" onsubmit="doSearch(event)">
-      <input id="homeQ" class="input input-bordered join-item w-full bg-white" style="border-radius:.65rem 0 0 .65rem"
-             placeholder="Was suchst du? Jacke, AirPods, #1002 …">
-      <button class="btn join-item" style="border-radius:0 .65rem .65rem 0">
-        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </button>
-    </form>
-
-    <!-- Zwei Wege -->
-    <div class="grid grid-cols-2 gap-3 mt-4">
-      <div class="icard icard-hover p-4 cursor-pointer" onclick="openReport('camera')">
-        <div class="w-10 h-10 rounded-xl bg-[var(--accent-fg)] flex items-center justify-center text-[var(--accent)]">
-          <svg class="lucide" style="width:1.4em;height:1.4em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg>
-        </div>
-        <b class="block mt-2 text-sm">Etwas gefunden?</b>
-        <span class="text-xs text-[var(--muted)]">Foto → automatisch eintragen</span>
-      </div>
-      <div class="icard icard-hover p-4 cursor-pointer" onclick="goSearchAll()">
-        <div class="w-10 h-10 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-[var(--info)]">
-          <svg class="lucide" style="width:1.4em;height:1.4em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M8.5 11h5"/></svg>
-        </div>
-        <b class="block mt-2 text-sm">Etwas verloren?</b>
-        <span class="text-xs text-[var(--muted)]">Verzeichnis durchsuchen</span>
-      </div>
-    </div>
-
-    <!-- Kategorien -->
-    <p class="lbl mt-6 mb-2">Kategorien</p>
-    <div class="scroller" id="scrollerCats"></div>
-
-    <!-- Neu -->
-    <p class="lbl mt-3 mb-2">Neu im Fundbüro</p>
-    <div class="scroller" id="scrollerNew"></div>
-
-    <!-- Alle Bereiche -->
-    <p class="lbl mt-3 mb-2">Alle Bereiche</p>
-    <div class="grid grid-cols-1 gap-2" id="catList"></div>
-  </div>
-
-  <!-- ============ SEARCH ============ -->
-  <div id="view-search" class="max-w-6xl mx-auto px-4 pb-10 hidden">
-    <button class="btn btn-ghost btn-sm mt-3 -ml-2" onclick="show('home')">
-      <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg> Start
-    </button>
-    <h1 class="text-xl mt-1" id="searchTitle">Alle Fundstücke</h1>
-    <form class="join w-full mt-3" onsubmit="doSearchFromView(event)">
-      <input id="searchQ" class="input input-bordered join-item w-full bg-white" style="border-radius:.65rem 0 0 .65rem" placeholder="Suchen oder #Belegnummer …">
-      <button class="btn join-item" style="border-radius:0 .65rem .65rem 0">
-        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </button>
-    </form>
-    <div class="flex flex-wrap gap-1.5 mt-3" id="catChips"></div>
-    <div class="flex flex-wrap gap-1.5 mt-2" id="statusChips"></div>
-    <p class="text-xs text-[var(--muted)] mt-4" id="resultCount"></p>
-    <div class="grid grid-cols-2 gap-3 mt-2" id="searchGrid"></div>
-  </div>
-
-  <!-- ============ ITEM ============ -->
-  <div id="view-item" class="max-w-3xl mx-auto px-4 pb-24 hidden">
-    <button class="btn btn-ghost btn-sm mt-3 -ml-2" onclick="backFromItem()">
-      <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg> Zurück
-    </button>
-    <div id="itemDetail" class="mt-2"></div>
-  </div>
-
-  </div><!-- /app -->
-
-<!-- ============ DRAWER ============ -->
-<div id="drawer" class="modal modal-start">
-  <div class="modal-box max-w-xs p-0 rounded-r-2xl rounded-l-none overflow-hidden">
-    <div class="p-4 border-b border-[var(--line)]">
-      <img src="__LOGO__" class="w-32" alt="kath.fund">
-      <p class="text-xs text-[var(--muted)] mt-2">Katharineum zu Lübeck</p>
-    </div>
-    <div class="p-3 space-y-0.5">
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.classList.remove('modal-open');show('home')">
-        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg> Start</button>
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium" onclick="drawer.classList.remove('modal-open');goSearchAll()">
-        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg> Alle Fundstücke</button>
-      <button class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#E9E8E4] text-sm font-medium text-left" onclick="drawer.classList.remove('modal-open');openReport('upload')">
-        <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.2"/></svg> Fund melden</button>
-    </div>
-    <div class="px-4 pt-2 pb-1 lbl">Kategorien</div>
-    <div class="px-3 pb-2 max-h-56 overflow-y-auto" id="drawerCats"></div>
-    <div class="px-4 pt-2 pb-1 lbl">Kennzahlen</div>
-    <div class="px-4 pb-4 grid grid-cols-2 gap-2" id="statDrawer"></div>
-  </div>
-  <button class="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white border border-[var(--line)] flex items-center justify-center text-[var(--muted)]" onclick="drawer.classList.remove('modal-open')">✕</button>
-</div>
-
-<!-- ============ CLAIM MODAL ============ -->
-<div id="claimModal" class="modal">
-  <div class="modal-box max-w-md p-5">
-    <h3 class="font-bold text-lg">Das ist meins</h3>
-    <p class="text-sm text-[var(--muted)] mt-0.5" id="claimItemLabel"></p>
-    <div class="pt-3 space-y-3">
-      <input id="claimName" class="input input-bordered w-full bg-white" placeholder="Name und Klasse* (z. B. Julia Koch, 9b)">
-      <textarea id="claimProof" class="textarea textarea-bordered w-full h-24 bg-white"
-        placeholder="Nachweis*: Was weiß nur die Besitzerin / der Besitzer? Inhalt, Gravur, Initialen …"></textarea>
-    </div>
-    <div class="modal-action">
-      <button class="btn btn-ghost btn-sm" onclick="claimModal.classList.remove('modal-open')">Abbrechen</button>
-      <button class="btn btn-accent btn-sm" onclick="submitClaim()">Anspruch einreichen</button>
-    </div>
-  </div>
-</div>
-
-<script>
-const DATA = __DATA__;
-const items = DATA.items;
-let currentView = 'home', lastGrid = null, filterCat = 'Alle', filterStatus = 'Alle';
-
-const $ = (s) => document.querySelector(s);
-['drawer','claimModal'].forEach(id => {
-  const m = document.getElementById(id);
-  if (m) m.addEventListener('click', e => { if (e.target === m) m.classList.remove('modal-open'); });
-});
-const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
-const KAT_ICON = {
-  "Kleidung & Textilien": '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23Z"/>',
-  "Trinkflaschen & Brotdosen": '<path d="M15 2h2a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h2"/><path d="M10 2v20"/><path d="M7 8h3M7 12h3M7 16h3"/>',
-  "Rucksäcke & Taschen": '<path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5"/>',
-  "Elektronik & Kabel": '<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm18 0h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-5Z"/><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>',
-  "Schlüssel & Wertsachen": '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
-  "Schulmaterial & Bücher": '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
-  "Sportbekleidung": '<path d="m8 3 4 8 5-5 5 15H2L8 3Z"/>',
-  "Sonstiges": '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
-};
-const katSvg = (kat, cls='lucide') =>
-  `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${KAT_ICON[kat]||KAT_ICON['Sonstiges']}</svg>`;
-
-function showFlash(t) { if (!t) return;
-  $('#flashText').textContent = t; $('#flash').classList.remove('hidden'); }
-function show(v) { currentView = v;
-  ['home','search','item'].forEach(x => $('#view-'+x).classList.toggle('hidden', x !== v));
-  window.scrollTo(0,0); fitHeight(); }
-
-function openReport(mode) { window.parent.postMessage({ kfund: 'report', mode: mode || 'upload' }, '*'); }
-function submitClaim() {
-  const name = $('#claimName').value.trim(), proof = $('#claimProof').value.trim();
-  const iid = claimModal.dataset.item;
-  if (!name || !proof) { $('#claimName').classList.toggle('input-error', !name);
-                         $('#claimProof').classList.toggle('textarea-error', !proof); return; }
-  window.parent.postMessage({ kfund: 'claim', item: iid, name, proof }, '*');
-}
-
-function statusBadge(s) {
-  const map = { 'Offen':'bg-[#FEF3C7] text-[#92400E]', 'Beansprucht':'bg-[#DBEAFE] text-[#1E40AF]',
-                'Abgeholt':'bg-[#DCFCE7] text-[#166534]', 'Entsorgt':'bg-[#FEE2E2] text-[#991B1B]' };
-  return `<span class="text-[.62rem] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 ${map[s]||'bg-[#E9E8E4] text-[var(--muted)]'}">${esc(s)}</span>`;
-}
-
-function card(i) {
-  const fig = i.img
-    ? `<figure class="h-32 overflow-hidden"><img src="${i.img}" class="w-full h-full object-cover" alt=""></figure>`
-    : `<figure class="h-32 dots flex items-center justify-center text-[var(--muted)]">
-         ${katSvg(i.kategorie,'lucide').replace('class="lucide"','class="lucide" style="width:2.8em;height:2.8em"')}</figure>`;
-  const neu = i.neu ? `<span class="text-[.62rem] font-semibold uppercase rounded-full px-2 py-0.5 bg-[var(--accent)] text-white">Neu</span>` : '';
-  return `
-  <div class="icard icard-hover cursor-pointer overflow-hidden" onclick="openItem(${i.id},'grid')">
-    ${fig}
-    <div class="p-3">
-      <b class="block text-[.88rem] leading-snug clamp2">${esc(i.titel)}</b>
-      <p class="text-[.68rem] text-[var(--muted)] mt-1">${esc(i.fundort)}</p>
-      <div class="flex flex-wrap gap-1 mt-2">${statusBadge(i.status)}${neu}</div>
-    </div>
-  </div>`;
-}
-
-function openItem(id, ctx) {
-  lastGrid = ctx;
-  const i = items.find(x => x.id === id); if (!i) return;
-  const claimable = i.status === 'Offen' || i.status === 'Beansprucht';
-  const fig = i.img
-    ? `<img src="${i.img}" class="w-full rounded-xl border border-[var(--line)] object-cover">`
-    : `<div class="rounded-xl border border-dashed border-[var(--line-dash)] h-56 dots flex items-center justify-center text-[var(--muted)]">
-         ${katSvg(i.kategorie,'lucide').replace('class="lucide"','class="lucide" style="width:4.5em;height:4.5em"')}</div>`;
-  const tags = (i.tags||[]).map(t=>`<span class="text-[.68rem] rounded-full border border-[var(--line)] px-2 py-0.5">${esc(t)}</span>`).join('');
-  $('#itemDetail').innerHTML = `
-  <div class="flex items-center gap-2 flex-wrap mt-1">
-    <h1 class="text-lg md:text-xl">${esc(i.titel)}</h1>
-    ${statusBadge(i.status)}${i.neu?'<span class="text-[.62rem] font-semibold uppercase rounded-full px-2 py-0.5 bg-[var(--accent)] text-white">Neu</span>':''}
-  </div>
-  <div class="mt-3 space-y-3">
-    ${fig}
-    ${tags?`<div class="flex flex-wrap gap-1.5">${tags}</div>`:''}
-    <div class="icard p-4 space-y-2.5 text-sm">
-      <div class="flex justify-between"><span class="text-[var(--muted)]">Kategorie</span><b>${esc(i.kategorie)}</b></div>
-      <div class="flex justify-between"><span class="text-[var(--muted)]">Fundort</span><b>${esc(i.fundort)}</b></div>
-      <div class="flex justify-between"><span class="text-[var(--muted)]">Gefunden</span><b>${esc(i.datum_fund)}</b></div>
-      <div class="flex justify-between"><span class="text-[var(--muted)]">Lagerort</span><b>${esc(i.abgabeort)}</b></div>
-      <div class="flex justify-between"><span class="text-[var(--muted)]">Abholen bis</span><b>${esc(i.datum_ablauf)}</b></div>
-      <p class="text-xs text-[var(--muted)] border-t border-[var(--line)] pt-2.5 leading-relaxed">${esc(i.beschreibung)}</p>
-    </div>
-    ${claimable
-      ? `<button class="btn btn-accent w-full" onclick="openClaim(${i.id})">Das ist meins — Anspruch melden</button>`
-      : `<p class="text-center text-xs text-[var(--muted)]">Bereits abgeholt.</p>`}
-  </div>`;
-  show('item');
-}
-function backFromItem() { show(lastGrid === 'search' ? 'search' : 'home'); }
-function openClaim(id) {
-  const i = items.find(x => x.id === id);
-  claimModal.dataset.item = id;
-  $('#claimItemLabel').textContent = `#${i.id} — ${i.titel} (${i.fundort})`;
-  $('#claimName').value = ''; $('#claimProof').value = '';
-  claimModal.classList.add('modal-open');
-  drawer.classList.remove('modal-open');
-}
-
-function matches(i) {
-  const q = $('#searchQ').value.trim().toLowerCase();
-  if (filterCat !== 'Alle' && i.kategorie !== filterCat) return false;
-  if (filterStatus !== 'Alle' && i.status !== filterStatus) return false;
-  if (!q) return true;
-  const hay = [i.titel, i.beschreibung, i.fundort, i.kategorie, ('#'+i.id), ...(i.tags||[])].join(' ').toLowerCase();
-  return hay.includes(q);
-}
-function renderSearch() {
-  const list = items.filter(matches).sort((a,b)=> b.datum_fund.localeCompare(a.datum_fund));
-  $('#resultCount').innerHTML = `<b>${list.length}</b> Treffer${filterCat!=='Alle'?' · '+esc(filterCat):''}`;
-  $('#searchGrid').innerHTML = list.length
-    ? list.map(i => card(i)).join('')
-    : `<div class="col-span-full icard border-dashed py-10 text-center text-sm text-[var(--muted)]">
-         Keine Treffer — anderen Suchbegriff probieren.</div>`;
-}
-function renderChips() {
-  const j = (s) => s.replace(/'/g, "\\'");
-  $('#catChips').innerHTML = ['Alle', ...DATA.categories]
-    .map(c => `<button class="chip ${filterCat===c?'on':''}" onclick="setCat('${j(c)}')">${esc(c)}</button>`).join('');
-  $('#statusChips').innerHTML = ['Alle','Offen','Beansprucht','Abgeholt']
-    .map(s => `<button class="chip ${filterStatus===s?'on':''}" onclick="setStatus('${s}')">${s}</button>`).join('');
-}
-function setCat(c) { filterCat = c; renderChips(); renderSearch(); }
-function setStatus(s) { filterStatus = s; renderChips(); renderSearch(); }
-function goSearchAll() { $('#searchQ').value=''; filterCat='Alle'; filterStatus='Alle';
-  renderChips(); renderSearch(); $('#searchTitle').textContent='Alle Fundstücke'; show('search'); }
-function goSearchCat(cat) { $('#searchQ').value=''; filterCat=cat; filterStatus='Alle';
-  renderChips(); renderSearch(); $('#searchTitle').textContent=cat; show('search'); }
-function doSearch(e) { e.preventDefault(); $('#searchQ').value = $('#homeQ').value;
-  filterCat='Alle'; filterStatus='Alle'; renderChips(); renderSearch();
-  $('#searchTitle').textContent='Suchergebnisse'; show('search'); }
-function doSearchFromView(e) { e.preventDefault(); renderSearch(); }
-
-function init() {
-  showFlash('__FLASH__');
-  const open = items.filter(i=>i.status==='Offen');
-
-  $('#scrollerCats').innerHTML = DATA.categories.map(cat => {
-    const n = items.filter(i=>i.kategorie===cat).length;
-    return `<div>
-      <div class="icard icard-hover p-3.5 cursor-pointer h-full" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">
-        <div class="w-9 h-9 rounded-lg bg-[#E9E8E4] flex items-center justify-center">${katSvg(cat)}</div>
-        <b class="block text-[.8rem] leading-tight mt-2 clamp2">${esc(cat)}</b>
-        <span class="text-[.66rem] text-[var(--muted)]">${n}</span>
-      </div></div>`;
-  }).join('');
-
-  const neu = [...items].filter(i=>i.status!=='Entsorgt')
-    .sort((a,b)=>b.datum_fund.localeCompare(a.datum_fund)).slice(0,10);
-  $('#scrollerNew').innerHTML = neu.map(i=>`<div>${card(i)}</div>`).join('');
-
-  $('#catList').innerHTML = DATA.categories.map(cat => {
-    const n = items.filter(i=>i.kategorie===cat).length;
-    return `<div class="icard flex items-center gap-3 px-3.5 py-2.5">
-      <div class="w-8 h-8 rounded-lg bg-[#E9E8E4] flex items-center justify-center">${katSvg(cat)}</div>
-      <div class="flex-1 min-w-0"><b class="block text-[.82rem] truncate">${esc(cat)}</b>
-        <span class="text-[.66rem] text-[var(--muted)]">${n} Fundstück(e)</span></div>
-      <button class="btn btn-ghost btn-xs" onclick="goSearchCat('${cat.replace(/'/g,"\\'")}')">→</button>
-    </div>`;
-  }).join('');
-
-  const j = (s) => s.replace(/'/g, "\\'");
-  $('#drawerCats').innerHTML = DATA.categories.map(c =>
-    `<button class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-[#E9E8E4] text-[.82rem]" onclick="drawer.classList.remove('modal-open');goSearchCat('${j(c)}')">
-      <span class="text-[var(--muted)]">${katSvg(c)}</span><span class="truncate">${esc(c)}</span>
-      <span class="ml-auto text-[.66rem] text-[var(--muted)]">${items.filter(i=>i.kategorie===c).length}</span></button>`).join('');
-
-  $('#statDrawer').innerHTML = `
-    <div class="icard p-2.5"><p class="lbl">Offen</p><p class="text-lg font-extrabold">${open.length}</p></div>
-    <div class="icard p-2.5"><p class="lbl">Neu</p><p class="text-lg font-extrabold">${items.filter(i=>i.neu).length}</p></div>
-    <div class="icard p-2.5"><p class="lbl">Abgeholt</p><p class="text-lg font-extrabold text-[var(--ok)]">${items.filter(i=>i.status==='Abgeholt').length}</p></div>
-    <div class="icard p-2.5"><p class="lbl">Gesamt</p><p class="text-lg font-extrabold">${items.length}</p></div>`;
-  renderChips();
-  // Hero: fliegende Objekte, random Richtung/Position, langsam + leicht gedreht
-  const heroImgs = DATA.hero || [];
-  const flyBox = $('#heroFly');
-  if (heroImgs.length && flyBox) {
-    // lane oben oder unten, nie hinter dem logo-band
-    const lane = () => (Math.random() < .5)
-      ? 4 + Math.random() * 10          // ganz oben
-      : 56 + Math.random() * 12;        // mittig-unten (nichts wird mehr abgeschnitten)
-    function spawnFly() {
-      if (document.hidden) return;
-      const src = heroImgs[Math.floor(Math.random() * heroImgs.length)];
-      const el = document.createElement('img');
-      el.src = src;
-      el.style.position = 'absolute';
-      el.style.opacity = '0';
-      el.style.filter = 'drop-shadow(0 10px 16px rgba(24,24,27,.14))';
-      el.style.willChange = 'transform';
-      flyBox.appendChild(el);
-      el.onload = () => {
-        // scale: lange bilder richten sich nach der hoehe
-        const ar = el.naturalWidth / el.naturalHeight;
-        const h = ar < 0.8 ? 90 + Math.random() * 40 : 64 + Math.random() * 36;
-        const w = h * ar;
-        el.style.width = w + 'px';
-        const ltr = Math.random() < .5;
-        const boxW = flyBox.clientWidth || 600;
-        const y = lane();
-        const rot = (Math.random() * 14 - 7);
-        const rot2 = (Math.random() * 10 - 5);
-        const dur = 9000 + Math.random() * 3000;    // zuegig wieder weg
-        el.style.top = y + '%';
-        const from = ltr ? -w - 40 : boxW + 40;
-        const to = ltr ? boxW + 40 : -w - 40;
-        el.animate([
-          { transform: `translateX(${from}px) rotate(${rot}deg)`, opacity: 0 },
-          { transform: `translateX(${from * .75 + to * .25}px) rotate(${(rot + rot2) / 2}deg)`, opacity: .85, offset: .12 },
-          { transform: `translateX(${from * .25 + to * .75}px) rotate(${rot2}deg)`, opacity: .85, offset: .88 },
-          { transform: `translateX(${to}px) rotate(${rot}deg)`, opacity: 0 }
-        ], { duration: dur, easing: 'linear' }).onfinish = () => el.remove();
-      };
-    }
-    spawnFly();
-    setInterval(spawnFly, 6000);
-  }
-}
-init();
-
-</script>
-</body>
-</html>
-"""
-
-UI = (UI
-      .replace("__WORDMARK__", wordmark)
-      .replace("__LOGOTOP__", logo_top)
-      .replace("__LOGO__", logo_main)
-      .replace("__DATA__", data_json)
-      .replace("__FLASH__", flash.replace("'", "\\'")))
-
-# ÃuÃeres iframe: gleiche origin -> darf streamlit-dom klicken (bruecke um die sandbox)
-OUTER = """<!doctype html><html><head><meta charset="utf-8">
-<style>html,body{margin:0;padding:0;background:#EDECE8}
-iframe{width:100%;border:0;display:block}</style></head><body>
-<iframe id="app" srcdoc="__SRCDOC__"
-  sandbox="allow-scripts allow-same-origin allow-modals allow-forms"
-  style="width:100%;height:1200px"></iframe>
-<script>
-const f = document.getElementById('app');
-function sync() {
-  try {
-    const h = f.contentDocument.documentElement.scrollHeight;
-    if (h > 200) {
-      f.style.height = h + 'px';
-      const of = window.frameElement;
-      if (of) {
-        of.style.height = h + 'px';
-        let p = of.parentElement;
-        if (p) p.style.height = h + 'px';
-        if (p && p.parentElement) p.parentElement.style.height = h + 'px';
-      }
-    }
-  } catch (e) {}
-}
-setInterval(sync, 500);
-
-function setNativeInput(el, val) {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-  setter.call(el, val);
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-}
-function clickButton(text) {
-  const doc = window.parent.document;
-  const btn = [...doc.querySelectorAll('button')].find(b => b.textContent.trim() === text);
-  if (btn) btn.click();
-  return !!btn;
-}
-window.addEventListener('message', (e) => {
-  const d = e.data || {};
-  if (!d.kfund) return;
-  const doc = window.parent.document;
-  if (d.kfund === 'report') {
-    clickButton(d.mode === 'camera' ? 'OPEN_REPORT_CAMERA' : 'OPEN_REPORT_UPLOAD');
-  } else if (d.kfund === 'home') {
-    clickButton('KFUND_HOME');
-  } else if (d.kfund === 'claim') {
-    const inputs = [...doc.querySelectorAll('[data-testid="stTextInput"] input')];
-    if (inputs.length >= 3) {
-      setNativeInput(inputs[0], d.name || '');
-      setNativeInput(inputs[1], d.proof || '');
-      setNativeInput(inputs[2], String(d.item || ''));
-      setTimeout(() => clickButton('SUBMIT_CLAIM'), 120);
-    }
-  }
-});
-</script></body></html>"""
-
-outer = OUTER.replace("__SRCDOC__", html_mod.escape(UI, quote=True))
-components.html(outer, height=1200, scrolling=False)
-
-st.markdown("""
-<style>
-  header[data-testid="stHeader"] { display: none !important; }
-  [data-testid="stAppViewContainer"] > section.main,
-  section.main { padding: 0 !important; }
-  .block-container, [data-testid="stMainBlockContainer"] {
-    padding: 0 !important; max-width: 100% !important; margin-top: 0 !important;
-  }
-  [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"],
-  section.stMain > div { background: #EDECE8 !important; }
-  [data-testid="stVerticalBlock"] { gap: 0 !important; }
-  section[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none !important; }
-</style>
-""", unsafe_allow_html=True)
-
-
+# =============================================================================
+# 10. Footer
+# =============================================================================
+st.write("")
+ui.separator()
+st.caption("kath.fund · Katharineum zu Lübeck · Fundbüro: Hausmeisterbüro (Raum 001) · "
+           "KI: Teachable Machine (TestKI4, keras_model.h5) · UI: streamlit-shadcn-ui")
